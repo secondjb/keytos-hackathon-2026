@@ -4,7 +4,6 @@ import {
   Typography,
   Autocomplete,
   TextField,
-  Chip,
   Button,
   Card,
   CardContent,
@@ -70,10 +69,13 @@ export const DrugInput: React.FC<DrugInputProps> = ({
 
     if (drugs.some(d => d.toLowerCase() === nameToAdd.toLowerCase())) {
       setInputError(`"${nameToAdd}" is already in your regimen list.`);
+      setInputValue('');
+      setOptions([]);
       return;
     }
 
     onChangeDrugs([...drugs, nameToAdd]);
+    // Clear search input and options immediately
     setInputValue('');
     setOptions([]);
   };
@@ -95,17 +97,17 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               Medication Search
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Direct live RxCheck dataset candidate search
+              Search live RxCheck dataset records
             </Typography>
           </Box>
         </Box>
 
-        {/* Autocomplete Input */}
+        {/* Autocomplete Input: controlled value={null} so selection clears input automatically */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
           <Autocomplete
             freeSolo
             fullWidth
-            // CRITICAL: disable client-side filter so server-resolved brand/generic names aren't dropped!
+            value={null}
             filterOptions={x => x}
             options={options}
             getOptionLabel={option => {
@@ -116,8 +118,12 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               return option.name;
             }}
             inputValue={inputValue}
-            onInputChange={(_, newInputValue) => {
-              setInputValue(newInputValue);
+            onInputChange={(_, newInputValue, reason) => {
+              if (reason === 'input' || reason === 'clear') {
+                setInputValue(newInputValue);
+              } else if (reason === 'reset') {
+                setInputValue('');
+              }
               if (inputError) setInputError('');
             }}
             onChange={(_, value) => {
@@ -135,7 +141,6 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                   onKeyDown={e => {
                     if (e.key === 'Enter' && inputValue.trim()) {
                       e.preventDefault();
-                      // If there is an exact or top option from search, prefer that resolved candidate
                       if (options.length > 0) {
                         handleAddDrug(options[0]);
                       } else {
@@ -167,7 +172,6 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               const isObj = typeof option !== 'string';
               const name = isObj ? option.name : option;
               const generic = isObj ? option.generic_name : null;
-              const rxcui = isObj ? option.rxcui : null;
 
               return (
                 <Box
@@ -176,31 +180,20 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                   {...restProps}
                   sx={{
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
                     width: '100%',
                     py: 1,
                     px: 1.5,
                   }}
                 >
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                      {name}
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {name}
+                  </Typography>
+                  {generic && generic.toLowerCase() !== name.toLowerCase() && (
+                    <Typography variant="caption" color="text.secondary">
+                      Generic: {generic}
                     </Typography>
-                    {generic && generic.toLowerCase() !== name.toLowerCase() && (
-                      <Typography variant="caption" color="text.secondary">
-                        Generic: {generic}
-                      </Typography>
-                    )}
-                  </Box>
-                  {rxcui && (
-                    <Chip
-                      label={`RxCUI ${rxcui}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      sx={{ fontSize: '0.65rem', height: 20 }}
-                    />
                   )}
                 </Box>
               );
