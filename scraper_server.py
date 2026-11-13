@@ -13,7 +13,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 import uvicorn
 
-from scrapling.fetchers import StealthyFetcher
+from scrapling import Fetcher, StealthyFetcher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ScraplingServer")
@@ -56,9 +56,20 @@ def _sync_search_drugs_com(query: str) -> List[Dict[str, Any]]:
 
         url = f"{AUTOCOMPLETE_API}{term}"
         try:
-            res = StealthyFetcher.fetch(url, headless=True)
-            if res.status != 200:
-                logger.warning(f"Drugs.com search failed for '{term}': status {res.status}")
+            # Fast impersonated HTTP fetch (<300ms)
+            res = None
+            try:
+                res = Fetcher.get(url, timeout=3)
+            except Exception as fe:
+                logger.debug(f"Fast Fetcher failed for '{term}': {fe}")
+                res = None
+
+            # Fallback to headless browser if fast fetch blocked or unavailable
+            if not res or getattr(res, "status", 0) != 200:
+                res = StealthyFetcher.fetch(url, headless=True, timeout=8000)
+
+            if not res or getattr(res, "status", 0) != 200:
+                logger.warning(f"Drugs.com search failed for '{term}': status {getattr(res, 'status', 'None')}")
                 continue
 
             data = json.loads(res.body)
@@ -104,18 +115,52 @@ def _sync_parse_report_html(html_content: str, url: str) -> Dict[str, Any]:
     if title_elem:
         report["title"] = title_elem.get_text(strip=True)
 
-    for acc in soup.find_all("div", class_="ddc-accordion-wrap"):
-        title = acc.find(["h3", "h4", "span"])
-        title_text = title.get_text(strip=True) if title else ""
+    details_items = soup.find_all(
+        ["details", "div"],
+        class_=lambda c: c and "ddc-accordion" in c and "ddc-accordion-wrap" not in c and "ddc-accordion-content" not in c
+    )
 
-        content_elem = acc.find(class_=lambda c: c and ("content" in c or "accordion" in c))
-        content_text = content_elem.get_text(separator=" ", strip=True) if content_elem else acc.get_text(separator=" ", strip=True)
-
-        prev_h2 = acc.find_previous("h2")
+    for item in details_items:
+        prev_h2 = item.find_previous("h2")
         section_name = prev_h2.get_text(strip=True).lower() if prev_h2 else ""
+
+        if "disease" in section_name:
+            continue
+
+        title_el = item.find(["h4", "h3"])
+        summary = item.find("summary")
+        title_text = title_el.get_text(separator=" ", strip=True) if title_el else (summary.get_text(separator=" ", strip=True) if summary else "")
+        if not title_text:
+            continue
+
+        subtitle_el = item.find(class_="ddc-accordion-subtitle")
+        subtitle_text = subtitle_el.get_text(strip=True) if subtitle_el else ""
+
+        applies_to = []
+        if subtitle_text:
+            cleaned_sub = re.sub(r'(?i)applies\s+to:\s*', '', subtitle_text)
+            applies_to = [d.strip().lower() for d in cleaned_sub.split(',') if d.strip()]
+
+        content_elem = item.find(class_="ddc-accordion-content")
+        content_text = content_elem.get_text(separator=" ", strip=True) if content_elem else item.get_text(separator=" ", strip=True)
+
+        sr_only = item.find(class_="ddc-sr-only")
+        sr_text = sr_only.get_text(strip=True).lower() if sr_only else ""
+        low_full = (title_text + " " + sr_text).lower()
+
+        severity = "Unknown"
+        if "major" in low_full:
+            severity = "Major"
+        elif "moderate" in low_full:
+            severity = "Moderate"
+        elif "minor" in low_full:
+            severity = "Minor"
 
         entry = {
             "title": title_text,
+            "subtitle": subtitle_text,
+            "applies_to": applies_to,
+            "severity": severity,
             "text": content_text
         }
 
@@ -123,20 +168,7 @@ def _sync_parse_report_html(html_content: str, url: str) -> Dict[str, Any]:
             report["duplications"].append(entry)
         elif "food" in section_name:
             report["food_interactions"].append(entry)
-        elif "disease" in section_name:
-            # Excluded per user requirements
-            continue
-        else:
-            severity = "Unknown"
-            low_title = title_text.lower()
-            if "major" in low_title:
-                severity = "Major"
-            elif "moderate" in low_title:
-                severity = "Moderate"
-            elif "minor" in low_title:
-                severity = "Minor"
-
-            entry["severity"] = severity
+        elif "drug" in section_name:
             report["drug_interactions"].append(entry)
 
     return report
@@ -184,7 +216,7 @@ def _sync_get_interactions(drugs_or_codes: List[str]) -> Dict[str, Any]:
     report_url = f"{INTERACTION_CHECK_URL}{','.join(resolved_codes)}"
     logger.info(f"Fetching Drugs.com interaction report: {report_url}")
 
-    res = StealthyFetcher.fetch(report_url, headless=True)
+    res = StealthyFetcher.fetch(report_url, headless=True, timeout=12000)
     report = _sync_parse_report_html(res.html_content, report_url)
     report["resolved_drugs"] = resolved_info
     REPORT_CACHE[cache_key] = report
