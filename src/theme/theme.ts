@@ -75,7 +75,7 @@ export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
           },
           outlined: {
             '&.MuiChip-colorError': {
-              color: isDark ? '#B30000' : '#b91c1c',
+              color: isDark ? '#f07777' : '#b91c1c',
             },
           },
         },

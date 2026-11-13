@@ -151,3 +151,59 @@ export interface ExtractedClinicalSymptom {
   sourcePair: string;
   severity: SeverityLevel;
 }
+
+// ---------------------------------------------------------------------------
+// Safe OTC & Supplement Matcher Types
+// ---------------------------------------------------------------------------
+
+export type OtcSafetyStatus = 'safe' | 'caution' | 'contraindicated';
+
+export interface OpenFdaDrugLabel {
+  brandName?: string;
+  genericName?: string;
+  purpose?: string;
+  indications?: string;
+  warnings?: string;
+  activeIngredients?: string[];
+  isFdaVerified: boolean;
+}
+
+export interface OtcCandidateDrug {
+  id: string;
+  name: string;
+  genericName: string;
+  brandExamples: string[];
+  drugClass: string;
+  defaultSafety: OtcSafetyStatus;
+  fdaSubstanceQuery: string;
+  mechanismSummary: string;
+  dosageGuidance: string;
+  keyContraindications: string[]; // e.g., ["warfarin", "lisinopril", "ssri", "nsaid"]
+  cautionNotes: string;
+}
+
+export interface AilmentDefinition {
+  id: string;
+  categoryId: string;
+  name: string;
+  iconName: string;
+  summary: string;
+  recommendedCandidates: OtcCandidateDrug[];
+}
+
+export interface OtcCategory {
+  id: string;
+  name: string;
+  description: string;
+  iconName: string;
+  ailments: AilmentDefinition[];
+}
+
+export interface EvaluatedOtcCandidate extends OtcCandidateDrug {
+  evaluatedSafety: OtcSafetyStatus;
+  safetyReason: string;
+  interactingRegimenDrugs: string[];
+  fdaLabel?: OpenFdaDrugLabel;
+  isLoadingFda?: boolean;
+}
+

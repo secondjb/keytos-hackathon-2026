@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { EvaluatedDrugPair, ExtractedClinicalSymptom, ScrapedInteractionReport } from '../types/rxcheck';
 import { evaluateLifestyleDietaryRadar } from '../services/lifestyleDietaryService';
+import { formatInteractionTitle } from './formatters';
 
 export interface GeneratePdfOptions {
   drugs: string[];
@@ -145,7 +146,7 @@ export function generateClinicalSummaryPdf({
 
     // Drug-to-Drug Warnings from Drugs.com
     dInteractions.forEach((item, index) => {
-      const cleanTitle = cleanPdfText(item.title);
+      const cleanTitle = cleanPdfText(formatInteractionTitle(item));
       const cleanDesc = cleanPdfText(item.text);
       const isMajor = item.severity?.toLowerCase() === 'major';
       const isModerate = item.severity?.toLowerCase() === 'moderate';
@@ -207,7 +208,7 @@ export function generateClinicalSummaryPdf({
     // Therapeutic Duplications
     if (dDuplications.length > 0) {
       dDuplications.forEach(item => {
-        const cleanTitle = cleanPdfText(item.title);
+        const cleanTitle = cleanPdfText(formatInteractionTitle(item));
         const cleanDesc = cleanPdfText(item.text);
 
         doc.setFont('helvetica', 'normal');
@@ -237,7 +238,7 @@ export function generateClinicalSummaryPdf({
     // Food, Alcohol & Dietary Precautions
     if (dFood.length > 0) {
       dFood.forEach(item => {
-        const cleanTitle = cleanPdfText(item.title);
+        const cleanTitle = cleanPdfText(formatInteractionTitle(item));
         const cleanDesc = cleanPdfText(item.text);
 
         doc.setFont('helvetica', 'normal');

@@ -305,7 +305,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                         variant="body2"
                         sx={{
                           fontWeight: 800,
-                          color: hasAlert ? 'error.main' : 'text.primary',
+                          color: hasAlert ? (theme.palette.mode === 'dark' ? '#f07777' : 'error.main') : 'text.primary',
                           mb: 0.8,
                         }}
                       >

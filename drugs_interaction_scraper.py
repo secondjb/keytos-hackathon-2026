@@ -43,7 +43,13 @@ class DrugsInteractionScraper:
         for acc in soup.find_all("div", class_="ddc-accordion-wrap"):
             # Check for header/title
             title = acc.find(["h3", "h4", "span"])
-            title_text = title.get_text(strip=True) if title else ""
+            if title:
+                for svg in title.find_all("svg"):
+                    svg.replace_with(" + ")
+                title_text = title.get_text(separator=" ", strip=True)
+                title_text = re.sub(r'\s*\+\s*', ' + ', title_text).strip()
+            else:
+                title_text = ""
             
             # Content
             content_elem = acc.find(class_=lambda c: c and ("content" in c or "accordion" in c))

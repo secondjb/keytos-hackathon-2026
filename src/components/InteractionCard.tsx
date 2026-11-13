@@ -188,7 +188,11 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
                 letterSpacing: 0.5,
                 display: 'block',
                 mb: 0.5,
-                color: isUnresolved ? 'warning.main' : item.severity === 'major' ? 'error.main' : 'warning.main',
+                color: isUnresolved
+                  ? 'warning.main'
+                  : item.severity === 'major'
+                  ? theme.palette.mode === 'dark' ? '#f07777' : 'error.main'
+                  : 'warning.main',
               }}
             >
               {isUnresolved ? 'Resolution Advice:' : 'Clinical Management & Patient Advice:'}

@@ -22,7 +22,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import type { ScrapedInteractionReport } from '../types/rxcheck';
+import type { ScrapedInteractionReport, ScrapedInteractionItem } from '../types/rxcheck';
+import { formatInteractionTitle } from '../utils/formatters';
 
 interface DrugsComReportCardProps {
   report: ScrapedInteractionReport | null;
@@ -105,6 +106,35 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
       default:
         return <Chip size="small" label={severity || 'NOTE'} variant="outlined" sx={{ fontWeight: 700 }} />;
     }
+  };
+
+  const renderFormattedTitle = (item: ScrapedInteractionItem) => {
+    const formatted = formatInteractionTitle(item);
+    const parts = formatted.split(' + ');
+    if (parts.length > 1) {
+      return (
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, flexWrap: 'wrap' }}>
+          {parts.map((part, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && (
+                <Box
+                  component="span"
+                  sx={{
+                    color: 'text.secondary',
+                    fontWeight: 700,
+                    mx: 0.1,
+                  }}
+                >
+                  +
+                </Box>
+              )}
+              <Box component="span">{part}</Box>
+            </React.Fragment>
+          ))}
+        </Box>
+      );
+    }
+    return formatted;
   };
 
   return (
@@ -248,7 +278,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, gap: 1 }}>
                           <Box>
                             <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                              {item.title}
+                              {renderFormattedTitle(item)}
                             </Typography>
                             {item.subtitle && (
                               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
@@ -302,7 +332,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
                         }}
                       >
                         <Typography variant="body2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                          {item.title}
+                          {renderFormattedTitle(item)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
                           {item.text}
@@ -348,7 +378,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
                         }}
                       >
                         <Typography variant="body2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                          {item.title}
+                          {renderFormattedTitle(item)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
                           {item.text}

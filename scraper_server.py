@@ -129,7 +129,14 @@ def _sync_parse_report_html(html_content: str, url: str) -> Dict[str, Any]:
 
         title_el = item.find(["h4", "h3"])
         summary = item.find("summary")
-        title_text = title_el.get_text(separator=" ", strip=True) if title_el else (summary.get_text(separator=" ", strip=True) if summary else "")
+        target_el = title_el or summary
+        if target_el:
+            for svg in target_el.find_all("svg"):
+                svg.replace_with(" + ")
+            title_text = target_el.get_text(separator=" ", strip=True)
+            title_text = re.sub(r'\s*\+\s*', ' + ', title_text).strip()
+        else:
+            title_text = ""
         if not title_text:
             continue
 
@@ -140,6 +147,23 @@ def _sync_parse_report_html(html_content: str, url: str) -> Dict[str, Any]:
         if subtitle_text:
             cleaned_sub = re.sub(r'(?i)applies\s+to:\s*', '', subtitle_text)
             applies_to = [d.strip().lower() for d in cleaned_sub.split(',') if d.strip()]
+
+        if " + " not in title_text and len(applies_to) >= 2:
+            parts = []
+            rem = title_text
+            matched_all = True
+            for d in applies_to:
+                idx = rem.lower().find(d.lower())
+                if idx != -1:
+                    parts.append(rem[idx:idx + len(d)])
+                    rem = rem[idx + len(d):].strip()
+                else:
+                    matched_all = False
+                    break
+            if matched_all and len(parts) == len(applies_to):
+                title_text = " + ".join(parts)
+            else:
+                title_text = " + ".join(applies_to)
 
         content_elem = item.find(class_="ddc-accordion-content")
         content_text = content_elem.get_text(separator=" ", strip=True) if content_elem else item.get_text(separator=" ", strip=True)

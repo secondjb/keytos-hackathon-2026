@@ -20,6 +20,7 @@ import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import type { EvaluatedDrugPair, ExtractedClinicalSymptom, ScrapedInteractionReport } from '../types/rxcheck';
 import { generateClinicalSummaryPdf } from '../utils/generateClinicalPdf';
 import { evaluateLifestyleDietaryRadar } from '../services/lifestyleDietaryService';
+import { formatInteractionTitle } from '../utils/formatters';
 
 interface DoctorReportModalProps {
   open: boolean;
@@ -85,20 +86,20 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
       if (dInteractions.length > 0) {
         sections.push('   Drug-to-Drug Interactions:');
         dInteractions.forEach((item, idx) => {
-          sections.push(`   [${idx + 1}] ${item.title} (${item.severity?.toUpperCase() || 'NOTE'})`);
+          sections.push(`   [${idx + 1}] ${formatInteractionTitle(item)} (${item.severity?.toUpperCase() || 'NOTE'})`);
           sections.push(`       ${item.text}`);
         });
       }
       if (dDuplications.length > 0) {
         sections.push('   Therapeutic Duplications:');
         dDuplications.forEach(item => {
-          sections.push(`   • ${item.title}: ${item.text}`);
+          sections.push(`   • ${formatInteractionTitle(item)}: ${item.text}`);
         });
       }
       if (dFood.length > 0) {
         sections.push('   Food & Lifestyle Precautions:');
         dFood.forEach(item => {
-          sections.push(`   • ${item.title}: ${item.text}`);
+          sections.push(`   • ${formatInteractionTitle(item)}: ${item.text}`);
         });
       }
       sections.push('');
@@ -250,7 +251,9 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                 variant="body1"
                 sx={{
                   fontWeight: 800,
-                  color: majorInteractions.length > 0 || dInteractions.length > 0 ? 'error.main' : 'text.primary',
+                  color: majorInteractions.length > 0 || dInteractions.length > 0
+                    ? (theme.palette.mode === 'dark' ? '#f07777' : 'error.main')
+                    : 'text.primary',
                 }}
               >
                 {results.filter(r => r.status === 'interaction_found').length + dInteractions.length}
@@ -265,7 +268,9 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                 variant="body1"
                 sx={{
                   fontWeight: 800,
-                  color: criticalSymptoms.length > 0 ? 'error.main' : 'text.primary',
+                  color: criticalSymptoms.length > 0
+                    ? (theme.palette.mode === 'dark' ? '#f07777' : 'error.main')
+                    : 'text.primary',
                 }}
               >
                 {criticalSymptoms.length}
@@ -324,7 +329,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                       <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                        {item.title}
+                        {formatInteractionTitle(item)}
                       </Typography>
                       <Chip
                         label={item.severity?.toUpperCase() || 'WARNING'}
@@ -460,7 +465,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                       border: `1px solid ${sym.isRedFlag ? theme.palette.error.main : theme.palette.divider}`,
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 800, color: sym.isRedFlag ? 'error.main' : 'inherit' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 800, color: sym.isRedFlag ? (theme.palette.mode === 'dark' ? '#f07777' : 'error.main') : 'inherit' }}>
                       {sym.isRedFlag && '[CRITICAL] '}
                       {sym.symptomName}
                       <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>

@@ -77,13 +77,13 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
               cursor: 'default',
             }}
           >
-            <PhoneInTalkIcon fontSize="small" color="error" />
+            <PhoneInTalkIcon fontSize="small" sx={{ color: isDark ? '#f07777' : 'error.main' }} />
             <Box sx={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
               <Typography
                 component="span"
                 sx={{
                   fontWeight: 700,
-                  color: 'error.main',
+                  color: isDark ? '#f07777' : 'error.main',
                   fontSize: { xs: '0.72rem', sm: '0.8rem' },
                   lineHeight: 1.25,
                 }}

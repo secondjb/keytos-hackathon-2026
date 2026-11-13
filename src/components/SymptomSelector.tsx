@@ -182,11 +182,11 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
                   p: 1.5,
                   borderRadius: 1.5,
                   bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                  borderLeft: `3px solid ${s.isRedFlag ? theme.palette.error.main : theme.palette.primary.main}`,
+                  borderLeft: `3px solid ${s.isRedFlag ? (theme.palette.mode === 'dark' ? '#f07777' : theme.palette.error.main) : theme.palette.primary.main}`,
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                 }}
               >
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: s.isRedFlag ? 'error.main' : 'primary.main' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: s.isRedFlag ? (theme.palette.mode === 'dark' ? '#f07777' : 'error.main') : 'primary.main' }}>
                   {s.symptomName} &bull; Related to {s.sourcePair}
                 </Typography>
                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 0.5 }}>
