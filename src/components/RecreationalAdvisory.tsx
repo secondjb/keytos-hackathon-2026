@@ -143,7 +143,12 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       px: 1.2,
-                      '& .MuiChip-label': { p: 0, color: theme.palette.error.contrastText, lineHeight: 1 },
+                      '& .MuiChip-label': {
+                        p: 0,
+                        color: theme.palette.error.contrastText,
+                        lineHeight: 1,
+                        textShadow: theme.palette.mode === 'dark' ? '0 1px 2px rgba(0, 0, 0, 0.8), 0 0 1px rgba(0, 0, 0, 0.6)' : 'none',
+                      },
                     } : {}),
                   }}
                 />

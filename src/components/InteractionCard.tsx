@@ -69,6 +69,7 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
               p: 0,
               color: theme.palette.error.contrastText,
               lineHeight: 1,
+              textShadow: theme.palette.mode === 'dark' ? '0 1px 2px rgba(0, 0, 0, 0.8), 0 0 1px rgba(0, 0, 0, 0.6)' : 'none',
             },
           }}
         />

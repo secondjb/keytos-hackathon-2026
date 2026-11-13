@@ -70,6 +70,7 @@ export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
           },
           colorError: {
             color: isDark ? offWhite : '#ffffff',
+            textShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.8), 0 0 1px rgba(0, 0, 0, 0.6)' : 'none',
           },
         },
       },

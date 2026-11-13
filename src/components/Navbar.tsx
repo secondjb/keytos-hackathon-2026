@@ -106,7 +106,7 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
           {/* Theme Toggle */}
           <Tooltip title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}>
             <IconButton onClick={onToggleTheme} color="inherit" size="small" sx={{ border: `1px solid ${theme.palette.divider}` }}>
-              {isDark ? <LightModeIcon fontSize="small" sx={{ color: 'warning.main' }} /> : <DarkModeIcon fontSize="small" />}
+              {isDark ? <LightModeIcon fontSize="small" sx={{ color: 'text.primary' }} /> : <DarkModeIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
         </Box>
