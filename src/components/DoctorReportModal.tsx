@@ -20,14 +20,14 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
-import type { EvaluatedDrugPair, SymptomCorrelation } from '../types/rxcheck';
+import type { EvaluatedDrugPair, ExtractedClinicalSymptom } from '../types/rxcheck';
 
 interface DoctorReportModalProps {
   open: boolean;
   onClose: () => void;
   drugs: string[];
   results: EvaluatedDrugPair[];
-  correlations: SymptomCorrelation[];
+  selectedSymptoms: ExtractedClinicalSymptom[];
 }
 
 export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
@@ -35,7 +35,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
   onClose,
   drugs,
   results,
-  correlations,
+  selectedSymptoms,
 }) => {
   const handlePrint = () => {
     window.print();
@@ -46,18 +46,18 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
       '=== PATIENT MEDICATION & INTERACTION SUMMARY FOR CLINICIAN ===',
       `Date Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
       '',
-      `CURRENT REGIMEN (${drugs.length} substances):`,
+      `CURRENT REGIMEN (${drugs.length} substances evaluated via RxCheck):`,
       ...drugs.map(d => `- ${d}`),
       '',
-      'DETECTED CLINICAL INTERACTIONS:',
+      'DETECTED CLINICAL INTERACTIONS (from RxCheck Dataset):',
       ...results.map(
         r =>
           `[${r.severity.toUpperCase()}] ${r.drug1} + ${r.drug2}: ${r.clinicalSignificance || 'No recorded interaction'}\nManagement: ${r.management}`
       ),
       '',
       'REPORTED PATIENT SYMPTOMS:',
-      ...(correlations.length > 0
-        ? correlations.map(c => `[! ${c.severity.toUpperCase()}] ${c.symptomName} -> ${c.actionRequired}`)
+      ...(selectedSymptoms.length > 0
+        ? selectedSymptoms.map(c => `[! ${c.isRedFlag ? 'RED FLAG' : 'OBSERVED'}] ${c.symptomName} (related to ${c.sourcePair}): "${c.contextSnippet}"`)
         : ['No adverse symptoms reported.']),
       '',
       'CLINICAL DISCUSSION QUESTIONS FOR PRESCRIBER:',
@@ -110,7 +110,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
         {/* Section 2: Interactions Found */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main', mb: 1.5 }}>
-            2. Detected Potential Interactions:
+            2. Detected Potential Interactions (RxCheck Active Dataset):
           </Typography>
           {results.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -167,21 +167,21 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
           <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>
             3. Patient-Reported Symptoms:
           </Typography>
-          {correlations.length === 0 ? (
+          {selectedSymptoms.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               None selected or reported.
             </Typography>
           ) : (
             <List disablePadding>
-              {correlations.map((c, i) => (
+              {selectedSymptoms.map((c, i) => (
                 <ListItem key={i} disableGutters sx={{ py: 0.5 }}>
                   <ListItemText
                     primary={
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: c.severity === 'emergency' ? 'error.main' : 'text.primary' }}>
-                        &bull; {c.symptomName}
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: c.isRedFlag ? 'error.main' : 'text.primary' }}>
+                        &bull; {c.symptomName} (From {c.sourcePair})
                       </Typography>
                     }
-                    secondary={c.alertMessage}
+                    secondary={`"${c.contextSnippet}"`}
                   />
                 </ListItem>
               ))}

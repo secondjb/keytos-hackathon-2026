@@ -3,49 +3,37 @@ export interface PresetScenario {
   title: string;
   subtitle: string;
   drugs: string[];
-  suggestedSymptoms?: string[];
-  badge: 'major' | 'harm_reduction' | 'multi_drug' | 'no_record';
 }
 
 export const PRESET_SCENARIOS: PresetScenario[] = [
   {
     id: 'warfarin_aspirin',
     title: 'Warfarin + Aspirin',
-    subtitle: 'Classic High-Risk Anticoagulant Interaction',
+    subtitle: 'High-risk bleeding combination from dataset',
     drugs: ['Warfarin', 'Aspirin'],
-    suggestedSymptoms: ['unusual_bleeding'],
-    badge: 'major',
   },
   {
-    id: 'three_drug_cardio',
+    id: 'cardio_polypharmacy',
     title: 'Lisinopril + Spironolactone + Potassium',
-    subtitle: '3-Drug Multi-Interaction: Hyperkalemia Hazard',
+    subtitle: '3-drug polypharmacy: N-choose-2 evaluation',
     drugs: ['Lisinopril', 'Spironolactone', 'Potassium Chloride'],
-    suggestedSymptoms: ['palpitations', 'dizziness_lightheaded'],
-    badge: 'multi_drug',
   },
   {
-    id: 'serotonin_syndrome',
-    title: "Sertraline + St. John's Wort + Tramadol",
-    subtitle: 'Triple Serotonergic Combination Risk',
-    drugs: ['Sertraline', "St. John's Wort", 'Tramadol'],
-    suggestedSymptoms: ['serotonin_symptoms'],
-    badge: 'major',
+    id: 'recreational_depressant',
+    title: 'Ethanol + Alprazolam (Xanax)',
+    subtitle: 'Recreational alcohol + prescription sedative',
+    drugs: ['Ethanol', 'Alprazolam'],
   },
   {
-    id: 'alcohol_sedative',
-    title: 'Alcohol + Xanax (Alprazolam)',
-    subtitle: 'Recreational & CNS Depressant Warning',
-    drugs: ['Alcohol (Ethanol)', 'Alprazolam (Xanax)'],
-    suggestedSymptoms: ['respiratory_depression'],
-    badge: 'harm_reduction',
+    id: 'serotonergic',
+    title: 'Sertraline + Tramadol',
+    subtitle: 'Dual serotonergic medications evaluation',
+    drugs: ['Sertraline', 'Tramadol'],
   },
   {
-    id: 'no_record_safety',
-    title: 'Amoxicillin + Vitamin C',
-    subtitle: 'Demonstrating "No Record Found != Safe" Guidance',
+    id: 'unverified_combination',
+    title: 'Amoxicillin + Melatonin',
+    subtitle: 'Demonstrating no-record-found dataset disclaimer',
     drugs: ['Amoxicillin', 'Melatonin'],
-    suggestedSymptoms: [],
-    badge: 'no_record',
   },
 ];

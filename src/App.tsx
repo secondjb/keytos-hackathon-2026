@@ -10,12 +10,14 @@ import {
   Alert,
   Tabs,
   Tab,
+  Chip,
   useMediaQuery,
 } from '@mui/material';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import GridViewIcon from '@mui/icons-material/GridView';
+import HubIcon from '@mui/icons-material/Hub';
 
 import { createAppTheme, type ThemeMode } from './theme/theme';
 import { Navbar } from './components/Navbar';
@@ -27,10 +29,12 @@ import { RecreationalAdvisory } from './components/RecreationalAdvisory';
 import { SymptomSelector } from './components/SymptomSelector';
 import { DoctorReportModal } from './components/DoctorReportModal';
 
-import { evaluateAllDrugPairs } from './services/rxCheckApi';
-import { checkRecreationalAdvisories } from './data/recreationalDb';
-import { correlateSymptoms } from './data/symptomsDb';
-import type { EvaluatedDrugPair } from './types/rxcheck';
+import {
+  checkPolypharmacyInteractions,
+  extractSymptomsFromRecords,
+  fetchAuthoritativeUsage,
+} from './services/rxCheckApi';
+import type { EvaluatedDrugPair, RxCheckPolypharmacySummary } from './types/rxcheck';
 import type { PresetScenario } from './data/presets';
 
 export const App: React.FC = () => {
@@ -41,8 +45,10 @@ export const App: React.FC = () => {
   });
 
   const [drugs, setDrugs] = useState<string[]>(['Warfarin', 'Aspirin']);
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [selectedSymptomIds, setSelectedSymptomIds] = useState<string[]>([]);
   const [results, setResults] = useState<EvaluatedDrugPair[]>([]);
+  const [summary, setSummary] = useState<RxCheckPolypharmacySummary | null>(null);
+  const [tierMode, setTierMode] = useState<string>('n_choose_2_evaluated');
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
   const [doctorModalOpen, setDoctorModalOpen] = useState(false);
@@ -56,19 +62,23 @@ export const App: React.FC = () => {
     localStorage.setItem('rxcheck_theme_mode', next);
   };
 
-  // Run evaluation
+  // Run Polypharmacy Evaluation
   const handleEvaluate = async (drugList = drugs) => {
     if (drugList.length < 2) return;
     setIsLoading(true);
     setProgress({ completed: 0, total: (drugList.length * (drugList.length - 1)) / 2 });
 
     try {
-      const evaluated = await evaluateAllDrugPairs(drugList, (completed, total) => {
+      const response = await checkPolypharmacyInteractions(drugList, (completed, total) => {
         setProgress({ completed, total });
       });
-      setResults(evaluated);
+
+      setResults(response.results);
+      setSummary(response.summary);
+      setTierMode(response.tier_mode);
+      fetchAuthoritativeUsage();
     } catch (err) {
-      console.error('Evaluation failed:', err);
+      console.error('Polypharmacy evaluation failed:', err);
     } finally {
       setIsLoading(false);
       setProgress(null);
@@ -78,24 +88,27 @@ export const App: React.FC = () => {
   // Handle Preset Selection
   const handleSelectPreset = (preset: PresetScenario) => {
     setDrugs(preset.drugs);
-    if (preset.suggestedSymptoms) {
-      setSelectedSymptoms(preset.suggestedSymptoms);
-    }
+    setSelectedSymptomIds([]);
     handleEvaluate(preset.drugs);
   };
 
-  // Automatic evaluation for initial state
+  // Initial evaluation on mount
   useEffect(() => {
     handleEvaluate(['Warfarin', 'Aspirin']);
+    fetchAuthoritativeUsage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Compute recreational advisories
-  const recreationalAdvisories = checkRecreationalAdvisories(drugs);
+  // Dynamically extract clinical symptoms directly from RxCheck records
+  const dynamicSymptoms = extractSymptomsFromRecords(results);
 
-  // Compute symptom correlations
-  const interactionMechanisms = results.map(r => `${r.clinicalSignificance} ${r.mechanism}`);
-  const symptomCorrelations = correlateSymptoms(selectedSymptoms, drugs, interactionMechanisms);
+  const handleToggleSymptom = (id: string) => {
+    if (selectedSymptomIds.includes(id)) {
+      setSelectedSymptomIds(selectedSymptomIds.filter(s => s !== id));
+    } else {
+      setSelectedSymptomIds([...selectedSymptomIds, id]);
+    }
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -122,12 +135,12 @@ export const App: React.FC = () => {
               </Box>
 
               <Typography variant="h3" component="h1" sx={{ fontWeight: 800, mb: 1.5, letterSpacing: '-1px' }}>
-                Intelligent Drug Interaction & Harm Reduction Checker
+                RxCheck Polypharmacy & Drug Interaction Engine
               </Typography>
 
               <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem', lineHeight: 1.6 }}>
-                Safeguarding patient well-being with multi-medication pairwise verification,
-                lifestyle & recreational harm-reduction advisories, and symptom-risk triage.
+                Direct integration with the RxCheck Clinical Dataset. Evaluates multi-medication N-choose-2 pairs,
+                surfaces clinical symptoms, and flags high-risk combinations.
               </Typography>
             </Box>
           </Container>
@@ -150,7 +163,7 @@ export const App: React.FC = () => {
               <Box sx={{ width: '100%' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                   <Typography variant="caption" color="text.secondary">
-                    Evaluating clinical pairwise records...
+                    Evaluating RxCheck dataset records...
                   </Typography>
                   <Typography variant="caption" sx={{ fontWeight: 700 }}>
                     {progress.completed} of {progress.total} pairs
@@ -160,32 +173,83 @@ export const App: React.FC = () => {
               </Box>
             )}
 
-            {/* 2. Doctor Warning Banner (Prominent Alert for Dangerous Drugs or No Results) */}
+            {/* Polypharmacy Evaluation Summary Banner */}
+            {summary && results.length > 0 && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 1.5,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: 'background.paper',
+                  border: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <HubIcon color="primary" />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    RxCheck Polypharmacy Evaluation: {summary.total_pairs} N-Choose-2 Pair{summary.total_pairs === 1 ? '' : 's'} Evaluated
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <Chip
+                    label={`${summary.interactions_found} Interaction${summary.interactions_found === 1 ? '' : 's'} Found`}
+                    color={summary.interactions_found > 0 ? 'warning' : 'success'}
+                    size="small"
+                    sx={{ fontWeight: 700 }}
+                  />
+                  {summary.onc_high_priority_count > 0 && (
+                    <Chip
+                      label={`${summary.onc_high_priority_count} ONC High Priority`}
+                      color="error"
+                      size="small"
+                      sx={{ fontWeight: 800 }}
+                    />
+                  )}
+                  <Chip
+                    label={
+                      tierMode === 'native_growth_api'
+                        ? 'Polypharmacy API (Server-Side)'
+                        : 'Evaluated N-Choose-2 Pairs (/v1/interactions)'
+                    }
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.7rem' }}
+                  />
+                </Box>
+              </Box>
+            )}
+
+            {/* 2. Doctor Warning Banner */}
             <DoctorWarningBanner
               results={results}
               onOpenReport={() => setDoctorModalOpen(true)}
             />
 
-            {/* 3. Symptom Checker & Red-Flag Clinical Correlation */}
+            {/* 3. Dynamic Symptoms Extracted from RxCheck Records */}
             <SymptomSelector
-              selectedSymptoms={selectedSymptoms}
-              onChangeSymptoms={setSelectedSymptoms}
-              correlations={symptomCorrelations}
+              symptoms={dynamicSymptoms}
+              selectedSymptomIds={selectedSymptomIds}
+              onToggleSymptom={handleToggleSymptom}
             />
 
-            {/* 4. Recreational & Lifestyle Harm Reduction Advisory */}
-            <RecreationalAdvisory advisories={recreationalAdvisories} />
+            {/* 4. Lifestyle & Recreational Substance Advisory */}
+            <RecreationalAdvisory results={results} drugs={drugs} />
 
-            {/* 5. Results Section */}
+            {/* 5. Interaction Results (Card & Matrix Views) */}
             {results.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1.5 }}>
                   <Box>
                     <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                      Interaction Results ({results.length} Pair{results.length === 1 ? '' : 's'})
+                      Evaluated Pairs ({results.length})
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Ranked by clinical severity and ONC High Priority guidance.
+                      Records retrieved directly from RxCheck dataset.
                     </Typography>
                   </Box>
 
@@ -203,7 +267,6 @@ export const App: React.FC = () => {
                   )}
                 </Box>
 
-                {/* Matrix View (when 3+ substances and user picked matrix) */}
                 {drugs.length >= 3 && activeTab === 'matrix' ? (
                   <InteractionMatrix drugs={drugs} results={results} />
                 ) : (
@@ -216,7 +279,7 @@ export const App: React.FC = () => {
               </Box>
             )}
 
-            {/* Clinical Disclaimer Footer Banner */}
+            {/* Clinical Disclaimer Footer */}
             <Alert
               severity="info"
               icon={<HealthAndSafetyIcon />}
@@ -239,7 +302,7 @@ export const App: React.FC = () => {
           onClose={() => setDoctorModalOpen(false)}
           drugs={drugs}
           results={results}
-          correlations={symptomCorrelations}
+          selectedSymptoms={dynamicSymptoms.filter(s => selectedSymptomIds.includes(s.id))}
         />
       </Box>
     </ThemeProvider>

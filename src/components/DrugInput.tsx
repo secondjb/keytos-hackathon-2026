@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -9,13 +9,20 @@ import {
   Stack,
   Card,
   CardContent,
+  CircularProgress,
   useTheme,
 } from '@mui/material';
 import MedicationIcon from '@mui/icons-material/Medication';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import { COMMON_DRUGS } from '../data/commonDrugs';
+import SearchIcon from '@mui/icons-material/Search';
+import {
+  searchDrugsFromRxCheck,
+  getStoredDrugCatalog,
+  bootstrapCatalogFromRxCheck,
+} from '../services/rxCheckApi';
+import type { RxCheckDrugSearchResult } from '../types/rxcheck';
 import { PRESET_SCENARIOS, type PresetScenario } from '../data/presets';
 
 interface DrugInputProps {
@@ -35,24 +42,34 @@ export const DrugInput: React.FC<DrugInputProps> = ({
 }) => {
   const theme = useTheme();
   const [inputValue, setInputValue] = useState('');
+  const [options, setOptions] = useState<RxCheckDrugSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Initialize catalog once from RxCheck dataset
+  useEffect(() => {
+    bootstrapCatalogFromRxCheck().then(catalog => {
+      setOptions(catalog);
+    });
+  }, []);
+
+  // Search RxCheck dynamically as user types
+  useEffect(() => {
+    if (inputValue.trim().length < 2) {
+      setOptions(getStoredDrugCatalog());
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      const results = await searchDrugsFromRxCheck(inputValue);
+      setOptions(results);
+      setIsSearching(false);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [inputValue]);
 
   const numPairs = drugs.length >= 2 ? (drugs.length * (drugs.length - 1)) / 2 : 0;
-
-  const getCategoryColor = (category?: string) => {
-    switch (category) {
-      case 'recreational':
-        return 'secondary';
-      case 'supplement':
-        return 'warning';
-      case 'otc':
-        return 'success';
-      case 'prescription':
-      default:
-        return 'primary';
-    }
-  };
-
-  const drugOptions = COMMON_DRUGS.map(d => d.name);
 
   return (
     <Card elevation={0}>
@@ -65,7 +82,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                 Medication & Substance Regimen
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Enter 2 or more prescription drugs, OTC remedies, supplements, or recreational substances.
+                Search RxCheck dataset for 2 or more medications, substances, or lifestyle items.
               </Typography>
             </Box>
           </Box>
@@ -83,41 +100,54 @@ export const DrugInput: React.FC<DrugInputProps> = ({
           )}
         </Box>
 
-        {/* Autocomplete Multi-Input */}
+        {/* Autocomplete Multi-Input drawn from RxCheck */}
         <Autocomplete
           multiple
           freeSolo
-          options={drugOptions}
+          options={options.map(o => o.name)}
           value={drugs}
           inputValue={inputValue}
           onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
           onChange={(_, newValue) => {
             onChangeDrugs(newValue as string[]);
           }}
-          renderInput={params => (
-            <TextField
-              {...params}
-              placeholder={drugs.length === 0 ? "Type drug name (e.g. Warfarin, Aspirin, Sertraline, Alcohol)..." : "Add another drug or substance..."}
-              helperText={
-                drugs.length < 2
-                  ? "Add at least 2 substances to evaluate pairwise interactions."
-                  : `Evaluating ${drugs.length} substances = ${numPairs} pairwise interaction check${numPairs === 1 ? '' : 's'}.`
-              }
-            />
-          )}
+          renderInput={params => {
+            const { slotProps, ...restParams } = params;
+            return (
+              <TextField
+                {...restParams}
+                placeholder={drugs.length === 0 ? "Search RxCheck dataset (e.g. Warfarin, Aspirin, Ethanol, Sertraline)..." : "Add another drug from RxCheck dataset..."}
+                helperText={
+                  drugs.length < 2
+                    ? "Select at least 2 drugs to evaluate n-choose-2 pairs via RxCheck Polypharmacy API."
+                    : `Evaluating ${drugs.length} drugs: RxCheck evaluates ${numPairs} n-choose-2 pair${numPairs === 1 ? '' : 's'}.`
+                }
+                slotProps={{
+                  ...slotProps,
+                  input: {
+                    ...slotProps?.input,
+                    endAdornment: (
+                      <>
+                        {isSearching ? <CircularProgress color="inherit" size={18} sx={{ mr: 1 }} /> : <SearchIcon color="action" sx={{ mr: 1 }} />}
+                        {slotProps?.input?.endAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
+            );
+          }}
           renderValue={(value, getItemProps) =>
             value.map((item, index) => {
               const strName = item as string;
-              const found = COMMON_DRUGS.find(
-                d => d.name.toLowerCase() === strName.toLowerCase()
-              );
+              const found = options.find(o => o.name.toLowerCase() === strName.toLowerCase());
               const itemProps = getItemProps({ index });
               return (
                 <Chip
                   {...itemProps}
                   key={strName + index}
                   label={strName}
-                  color={getCategoryColor(found?.category)}
+                  color={found?.rxcui ? 'primary' : 'default'}
                   variant="filled"
                   sx={{ fontWeight: 600, m: 0.5 }}
                 />
@@ -126,9 +156,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
           }
           renderOption={(props, option) => {
             const { key, ...restProps } = props;
-            const found = COMMON_DRUGS.find(
-              d => d.name.toLowerCase() === option.toLowerCase()
-            );
+            const found = options.find(o => o.name.toLowerCase() === option.toLowerCase());
             return (
               <Box
                 key={key}
@@ -140,17 +168,16 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {option}
                   </Typography>
-                  {found?.commonUses && (
+                  {found?.generic_name && (
                     <Typography variant="caption" color="text.secondary">
-                      {found.commonUses}
+                      Generic: {found.generic_name}
                     </Typography>
                   )}
                 </Box>
-                {found?.category && (
+                {found?.rxcui && (
                   <Chip
-                    label={found.category.toUpperCase()}
+                    label={`RxCUI ${found.rxcui}`}
                     size="small"
-                    color={getCategoryColor(found.category)}
                     variant="outlined"
                     sx={{ fontSize: '0.65rem', height: 20 }}
                   />
@@ -171,16 +198,16 @@ export const DrugInput: React.FC<DrugInputProps> = ({
             onClick={onEvaluate}
             sx={{ px: 4, py: 1.2, fontWeight: 700 }}
           >
-            {isLoading ? 'Analyzing Interactions...' : `Check Interactions (${numPairs} pair${numPairs === 1 ? '' : 's'})`}
+            {isLoading ? 'Running Polypharmacy Check...' : `Evaluate Polypharmacy (${numPairs} pair${numPairs === 1 ? '' : 's'})`}
           </Button>
         </Box>
 
-        {/* Preset Scenarios for Hackathon Judges & Fast Testing */}
+        {/* Preset Scenarios drawn from real RxCheck dataset pairs */}
         <Box sx={{ mt: 3, pt: 2, borderTop: `1px dashed ${theme.palette.divider}` }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
             <AutoAwesomeIcon fontSize="small" sx={{ color: 'secondary.main' }} />
             <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
-              Test Preset Scenarios (Zero-Quota / Instant Evaluation):
+              Sample Regimens for RxCheck Evaluation:
             </Typography>
           </Box>
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
@@ -190,15 +217,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                 label={preset.title}
                 clickable
                 variant="outlined"
-                color={
-                  preset.badge === 'major'
-                    ? 'error'
-                    : preset.badge === 'harm_reduction'
-                    ? 'secondary'
-                    : preset.badge === 'multi_drug'
-                    ? 'primary'
-                    : 'default'
-                }
+                color="primary"
                 onClick={() => {
                   onChangeDrugs(preset.drugs);
                   if (onSelectPreset) onSelectPreset(preset);

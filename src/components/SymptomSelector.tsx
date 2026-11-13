@@ -8,30 +8,48 @@ import {
   Alert,
   AlertTitle,
   Stack,
+  useTheme,
 } from '@mui/material';
 import HealingIcon from '@mui/icons-material/Healing';
 import EmergencyIcon from '@mui/icons-material/Emergency';
-import { COMMON_SYMPTOMS } from '../data/symptomsDb';
-import type { SymptomCorrelation } from '../types/rxcheck';
+import type { ExtractedClinicalSymptom } from '../types/rxcheck';
 
 interface SymptomSelectorProps {
-  selectedSymptoms: string[];
-  onChangeSymptoms: (ids: string[]) => void;
-  correlations: SymptomCorrelation[];
+  symptoms: ExtractedClinicalSymptom[];
+  selectedSymptomIds: string[];
+  onToggleSymptom: (id: string) => void;
 }
 
 export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
-  selectedSymptoms,
-  onChangeSymptoms,
-  correlations,
+  symptoms,
+  selectedSymptomIds,
+  onToggleSymptom,
 }) => {
-  const handleToggleSymptom = (id: string) => {
-    if (selectedSymptoms.includes(id)) {
-      onChangeSymptoms(selectedSymptoms.filter(s => s !== id));
-    } else {
-      onChangeSymptoms([...selectedSymptoms, id]);
-    }
-  };
+  const theme = useTheme();
+
+  if (symptoms.length === 0) {
+    return (
+      <Card elevation={0} sx={{ mb: 3 }}>
+        <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <HealingIcon color="primary" fontSize="large" />
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Clinical Adverse Signs & Symptoms (RxCheck Dataset)
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Adverse symptoms and warning signs will be dynamically extracted directly from the RxCheck
+                clinical interaction records for your active drug list.
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const selectedSymptomsList = symptoms.filter(s => selectedSymptomIds.includes(s.id));
+  const hasSelectedRedFlag = selectedSymptomsList.some(s => s.isRedFlag);
 
   return (
     <Card elevation={0} sx={{ mb: 3 }}>
@@ -40,33 +58,34 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
           <HealingIcon color="primary" fontSize="large" />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Symptom Checker & Red-Flag Clinical Correlation
+              Clinical Symptoms & Adverse Warning Signs ({symptoms.length} Extracted from RxCheck Records)
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Are you currently experiencing any unusual physical sensations or adverse effects? Select any that apply:
+              The following symptoms are documented in the active RxCheck records for your regimen.
+              Select any symptoms you are experiencing to evaluate urgency:
             </Typography>
           </Box>
         </Box>
 
-        {/* Symptom Selection Chips */}
+        {/* Dynamic Symptom Chips Extracted From RxCheck Records */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 2 }}>
-          {COMMON_SYMPTOMS.map(symptom => {
-            const isSelected = selectedSymptoms.includes(symptom.id);
+          {symptoms.map(s => {
+            const isSelected = selectedSymptomIds.includes(s.id);
             return (
               <Chip
-                key={symptom.id}
-                label={symptom.label}
+                key={s.id}
+                label={s.symptomName}
                 clickable
                 color={
                   isSelected
-                    ? symptom.isRedFlag
+                    ? s.isRedFlag
                       ? 'error'
                       : 'primary'
                     : 'default'
                 }
                 variant={isSelected ? 'filled' : 'outlined'}
-                onClick={() => handleToggleSymptom(symptom.id)}
-                icon={symptom.isRedFlag ? <EmergencyIcon fontSize="small" /> : undefined}
+                onClick={() => onToggleSymptom(s.id)}
+                icon={s.isRedFlag ? <EmergencyIcon fontSize="small" /> : undefined}
                 sx={{
                   fontWeight: isSelected ? 700 : 500,
                   fontSize: '0.8rem',
@@ -79,32 +98,51 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
           })}
         </Box>
 
-        {/* Clinical Correlation Warning Banners */}
-        {correlations.length > 0 && (
-          <Stack spacing={1.5} sx={{ mt: 3 }}>
-            {correlations.map((corr, idx) => (
-              <Alert
-                key={idx}
-                severity={corr.severity === 'emergency' ? 'error' : 'warning'}
-                variant={corr.severity === 'emergency' ? 'filled' : 'standard'}
+        {/* Red Flag Alert if User Checked Any Critical Symptoms */}
+        {hasSelectedRedFlag && (
+          <Alert
+            severity="error"
+            variant="filled"
+            sx={{
+              borderRadius: 2,
+              mt: 2,
+              boxShadow: '0 6px 18px rgba(220, 38, 38, 0.35)',
+            }}
+          >
+            <AlertTitle sx={{ fontWeight: 800 }}>
+              CRITICAL EMERGENCY SYMPTOM DETECTED
+            </AlertTitle>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              You selected symptoms flagged as critical adverse reactions in the RxCheck clinical record.
+              Seek immediate emergency medical evaluation (call 911 or visit the nearest ER) and inform the
+              clinical team of your current medications.
+            </Typography>
+          </Alert>
+        )}
+
+        {/* Selected Symptoms Breakdown with Evidence from RxCheck */}
+        {selectedSymptomsList.length > 0 && (
+          <Stack spacing={1.5} sx={{ mt: 2.5 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'text.secondary' }}>
+              RxCheck Clinical Dataset Excerpt:
+            </Typography>
+            {selectedSymptomsList.map(s => (
+              <Box
+                key={s.id}
                 sx={{
-                  borderRadius: 2,
-                  boxShadow: corr.severity === 'emergency'
-                    ? '0 6px 18px rgba(220, 38, 38, 0.3)'
-                    : undefined,
+                  p: 1.5,
+                  borderRadius: 1.5,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                  borderLeft: `3px solid ${s.isRedFlag ? theme.palette.error.main : theme.palette.primary.main}`,
                 }}
               >
-                <AlertTitle sx={{ fontWeight: 800 }}>
-                  {corr.severity === 'emergency' ? 'CRITICAL SYMPTOM ALERT: ' : 'ADVERSE EFFECT WARNING: '}
-                  {corr.symptomName}
-                </AlertTitle>
-                <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                  {corr.alertMessage}
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: s.isRedFlag ? 'error.main' : 'primary.main' }}>
+                  {s.symptomName} &bull; Related to {s.sourcePair}
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.9, display: 'block', fontWeight: 600 }}>
-                  Potential interaction link: {corr.relatedDrugs.join(', ')} &bull; Action required: {corr.actionRequired}
+                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mt: 0.5 }}>
+                  &ldquo;{s.contextSnippet}&rdquo;
                 </Typography>
-              </Alert>
+              </Box>
             ))}
           </Stack>
         )}

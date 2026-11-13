@@ -1,5 +1,5 @@
 export type ResultStatus = 'interaction_found' | 'no_record_found' | 'error';
-export type SeverityLevel = 'major' | 'moderate' | 'minor' | 'none';
+export type SeverityLevel = 'contraindicated' | 'major' | 'moderate' | 'minor' | 'none';
 
 export interface DrugNormalization {
   term_type?: string;
@@ -18,19 +18,19 @@ export interface DrugQueryInfo {
 
 export interface InteractionDetail {
   found: boolean;
-  result_status: ResultStatus;
+  result_status?: ResultStatus;
   dataset_release?: string;
   severity: SeverityLevel;
-  severity_score?: number; // 0 to 4+
+  severity_score?: number;
   onc_high_priority?: boolean;
-  mechanism?: string;
-  clinical_significance?: string;
-  management?: string;
-  evidence_level?: string;
+  mechanism?: string | null;
+  clinical_significance?: string | null;
+  management?: string | null;
+  evidence_level?: string | null;
   sources?: string[];
   review_status?: string | null;
-  disclaimer?: string;
-  note?: string;
+  disclaimer?: string | null;
+  note?: string | null;
 }
 
 export interface ApiMeta {
@@ -43,7 +43,7 @@ export interface ApiMeta {
 }
 
 export interface RxCheckApiResponse {
-  status: 'success' | 'error';
+  status?: 'success' | 'error';
   result_status: ResultStatus;
   dataset_release?: string;
   disclaimer?: string;
@@ -56,7 +56,8 @@ export interface RxCheckApiResponse {
   error?: {
     code: string;
     message: string;
-    status: number;
+    request_id?: string;
+    upgrade_url?: string;
   };
 }
 
@@ -80,22 +81,50 @@ export interface EvaluatedDrugPair {
   timestamp: number;
 }
 
-export interface RecreationalAdvisoryItem {
-  id: string;
-  substance1: string;
-  substance2: string; // drug or class (e.g., "Anticoagulants", "Benzodiazepines", "SSRIs")
-  matchedDrug: string;
-  riskTitle: string;
-  severity: 'critical' | 'high' | 'moderate';
-  mechanism: string;
-  harmReductionAdvice: string;
-  symptomsToWatch: string[];
+export interface RxCheckDrugSearchResult {
+  name: string;
+  rxcui: string | null;
+  generic_name: string | null;
+  brand_names: string[];
+  drug_class: string | null;
 }
 
-export interface SymptomCorrelation {
+export interface RxCheckPolypharmacySummary {
+  total_pairs: number;
+  interactions_found: number;
+  no_record_count: number;
+  max_severity: SeverityLevel;
+  onc_high_priority_count: number;
+}
+
+export interface RxCheckPolypharmacyResponse {
+  results: EvaluatedDrugPair[];
+  summary: RxCheckPolypharmacySummary;
+  tier_mode: 'native_growth_api' | 'n_choose_2_evaluated';
+  server_endpoint_used: string;
+}
+
+export interface RxCheckUsageInfo {
+  tier: string;
+  monthly_limit: number;
+  queries_used: number;
+  queries_remaining: number;
+  evaluated_pairs_used?: number;
+  evaluated_pairs_remaining?: number;
+  features?: {
+    batch: boolean;
+    batch_size: number | null;
+    polypharmacy: boolean;
+    webhooks: boolean;
+  };
+  limit_resets_at?: string;
+}
+
+export interface ExtractedClinicalSymptom {
+  id: string;
   symptomName: string;
-  severity: 'emergency' | 'warning' | 'info';
-  relatedDrugs: string[];
-  alertMessage: string;
-  actionRequired: string;
+  contextSnippet: string;
+  isRedFlag: boolean;
+  sourcePair: string;
+  severity: SeverityLevel;
 }

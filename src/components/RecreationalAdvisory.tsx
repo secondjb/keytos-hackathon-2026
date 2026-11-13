@@ -10,16 +10,46 @@ import {
   useTheme,
 } from '@mui/material';
 import ShieldIcon from '@mui/icons-material/Shield';
-import type { RecreationalAdvisoryItem } from '../types/rxcheck';
+import type { EvaluatedDrugPair } from '../types/rxcheck';
 
 interface RecreationalAdvisoryProps {
-  advisories: RecreationalAdvisoryItem[];
+  results: EvaluatedDrugPair[];
+  drugs: string[];
 }
 
-export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ advisories }) => {
+const RECREATIONAL_SUBSTANCE_NAMES = [
+  'ethanol',
+  'alcohol',
+  'cannabis',
+  'marijuana',
+  'thc',
+  'cbd',
+  'cocaine',
+  'mdma',
+  'nicotine',
+  'caffeine',
+  'kratom',
+  'psilocybin',
+];
+
+export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ results, drugs }) => {
   const theme = useTheme();
 
-  if (advisories.length === 0) return null;
+  // Detect which active drugs are recreational/lifestyle substances
+  const recreationalInRegimen = drugs.filter(d =>
+    RECREATIONAL_SUBSTANCE_NAMES.some(sub => d.toLowerCase().includes(sub))
+  );
+
+  if (recreationalInRegimen.length === 0) return null;
+
+  // Filter pairs that involve a recreational substance
+  const relevantPairs = results.filter(r =>
+    recreationalInRegimen.some(
+      sub =>
+        r.drug1.toLowerCase().includes(sub.toLowerCase()) ||
+        r.drug2.toLowerCase().includes(sub.toLowerCase())
+    )
+  );
 
   return (
     <Card
@@ -35,84 +65,50 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ advi
           <ShieldIcon color="secondary" fontSize="large" />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800, color: 'secondary.main' }}>
-              Harm Reduction Advisory: Recreational & Lifestyle Substances
+              Lifestyle & Recreational Substance Advisory (RxCheck Analysis)
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Evidence-based, non-judgmental safety guidance for substance and medication combinations.
+              Evaluating clinical dataset records for: {recreationalInRegimen.join(', ')}
             </Typography>
           </Box>
         </Box>
 
         <Alert severity="info" variant="outlined" sx={{ mb: 2.5, bgcolor: 'background.paper' }}>
-          Standard clinical trial datasets frequently omit recreational drugs.
-          The warnings below are compiled from toxicology, emergency medicine, and public health harm reduction literature.
+          RxCheck dataset note: Clinical trials for prescription drugs frequently exclude recreational substances.
+          When RxCheck returns <code>no_record_found</code>, remember that lack of documented trial data does <strong>NOT</strong> establish safety.
         </Alert>
 
         <Stack spacing={2}>
-          {advisories.map(adv => (
+          {relevantPairs.map(item => (
             <Box
-              key={adv.id}
+              key={item.id}
               sx={{
-                p: 2.5,
+                p: 2,
                 borderRadius: 2,
                 bgcolor: 'background.paper',
                 border: `1px solid ${theme.palette.divider}`,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 12px rgba(0,0,0,0.4)' : '0 2px 8px rgba(0,0,0,0.04)',
               }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary' }}>
-                  {adv.substance1} &bull; {adv.substance2}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  {item.drug1} + {item.drug2}
                 </Typography>
                 <Chip
-                  label={adv.severity === 'critical' ? 'CRITICAL RISK' : 'HIGH RISK'}
-                  color={adv.severity === 'critical' ? 'error' : 'secondary'}
+                  label={item.severity === 'major' ? 'MAJOR RISK' : item.severity === 'moderate' ? 'MODERATE RISK' : item.status === 'no_record_found' ? 'NO RECORD IN DATASET' : 'EVALUATED'}
+                  color={item.severity === 'major' ? 'error' : item.severity === 'moderate' ? 'warning' : 'default'}
                   size="small"
-                  sx={{ fontWeight: 800, fontSize: '0.72rem' }}
+                  sx={{ fontWeight: 700, fontSize: '0.72rem' }}
                 />
               </Box>
 
-              <Typography variant="body2" sx={{ fontWeight: 700, color: 'error.main', mb: 1 }}>
-                {adv.riskTitle}
+              <Typography variant="body2" sx={{ color: 'text.primary', mb: 1 }}>
+                {item.clinicalSignificance || 'No clinical interaction record found in the current RxCheck dataset.'}
               </Typography>
 
-              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5, lineHeight: 1.6 }}>
-                <strong>Biological Risk:</strong> {adv.mechanism}
-              </Typography>
-
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 211, 238, 0.08)' : 'rgba(240, 253, 250, 1)',
-                  borderLeft: `3px solid ${theme.palette.primary.main}`,
-                  mb: 1.5,
-                }}
-              >
-                <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', color: 'primary.main', display: 'block', mb: 0.5 }}>
-                  Harm Reduction Guidance:
+              {item.management && (
+                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+                  Clinical Guidance: {item.management}
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {adv.harmReductionAdvice}
-                </Typography>
-              </Box>
-
-              {adv.symptomsToWatch.length > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                    Critical Signs to Watch:
-                  </Typography>
-                  {adv.symptomsToWatch.map(sym => (
-                    <Chip
-                      key={sym}
-                      label={sym}
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      sx={{ fontSize: '0.7rem' }}
-                    />
-                  ))}
-                </Box>
               )}
             </Box>
           ))}
