@@ -8,7 +8,6 @@ import {
   Collapse,
   Button,
   Divider,
-  Stack,
   useTheme,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -147,24 +146,10 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
             </Box>
           </Box>
 
-          {/* Final 2 chips: same height and size, cached badge removed */}
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            {item.isHighPriority && (
-              <Chip
-                label="ONC High Priority"
-                color="error"
-                variant="outlined"
-                sx={{
-                  height: 26,
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  borderRadius: 1,
-                  px: 0.5,
-                }}
-              />
-            )}
+          {/* Severity Badge */}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             {getSeverityBadge(item.severity, item.isHighPriority)}
-          </Stack>
+          </Box>
         </Box>
 
         {/* Clinical Significance / Summary */}

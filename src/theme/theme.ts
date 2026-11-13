@@ -68,9 +68,16 @@ export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
             borderRadius: 6,
             fontWeight: 700,
           },
-          colorError: {
-            color: isDark ? offWhite : '#ffffff',
-            textShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.8), 0 0 1px rgba(0, 0, 0, 0.6)' : 'none',
+          filled: {
+            '&.MuiChip-colorError': {
+              color: isDark ? offWhite : '#ffffff',
+              textShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.8), 0 0 1px rgba(0, 0, 0, 0.6)' : 'none',
+            },
+          },
+          outlined: {
+            '&.MuiChip-colorError': {
+              color: isDark ? '#E54D58' : '#b91c1c',
+            },
           },
         },
       },
