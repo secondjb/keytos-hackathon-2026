@@ -91,7 +91,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
                 Search & Add Substances
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Type in the search field on the left. Queries are dispatched live to the RxCheck dataset and cached for instant re-use. Select at least 2 items.
+                Type in the search field on the left to search by brand or generic name. Select at least 2 items.
               </Typography>
             </Box>
           </Box>

@@ -1,6 +1,7 @@
 import json
 import logging
 import asyncio
+import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Optional
 from bs4 import BeautifulSoup
@@ -21,61 +22,82 @@ BASE_URL = "https://www.drugs.com"
 AUTOCOMPLETE_API = "https://www.drugs.com/api/autocomplete/?type=interaction-basic&s="
 INTERACTION_CHECK_URL = "https://www.drugs.com/interactions-check.php?drug_list="
 
-# Worker pool for running Playwright/Patchright sync calls
 EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
-# Memory caches
 SEARCH_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 REPORT_CACHE: Dict[str, Dict[str, Any]] = {}
+
+def clean_drug_string(d: str) -> (str, Optional[str]):
+    """Extracts main drug name and optional parenthetical name."""
+    base = re.sub(r'\(.*?\)', '', d).strip()
+    base = re.sub(r'[^a-zA-Z0-9\s-]', '', base).strip()
+    parens = re.findall(r'\((.*?)\)', d)
+    paren = None
+    if parens:
+        paren = re.sub(r'[^a-zA-Z0-9\s-]', '', parens[0]).strip()
+    return base, paren
 
 def _sync_search_drugs_com(query: str) -> List[Dict[str, Any]]:
     clean = query.strip().lower()
     if len(clean) < 2:
         return []
 
-    if clean in SEARCH_CACHE:
-        return SEARCH_CACHE[clean]
+    # If query has parentheses or noise, clean it
+    base_name, paren_name = clean_drug_string(clean)
+    search_terms = [clean]
+    if base_name and base_name != clean:
+        search_terms.insert(0, base_name)
+    if paren_name and paren_name != clean and paren_name != base_name:
+        search_terms.append(paren_name)
 
-    url = f"{AUTOCOMPLETE_API}{clean}"
-    try:
-        res = StealthyFetcher.fetch(url, headless=True)
-        if res.status != 200:
-            logger.warning(f"Drugs.com search failed: status {res.status}")
-            return []
+    for term in search_terms:
+        if term in SEARCH_CACHE and SEARCH_CACHE[term]:
+            return SEARCH_CACHE[term]
 
-        data = json.loads(res.body)
-        results = []
-        categories = data.get("categories", [])
-        if categories and categories[0].get("results"):
-            for item in categories[0]["results"]:
-                suggestion = item.get("suggestion", "").replace("+", " ")
-                ddc_id = item.get("ddc_id")
-                brand_id = item.get("brand_name_id", 0)
-                if suggestion and ddc_id is not None:
-                    results.append({
-                        "name": suggestion,
-                        "generic_name": item.get("additional") or None,
-                        "ddc_id": ddc_id,
-                        "brand_name_id": brand_id,
-                        "code": f"{ddc_id}-{brand_id}",
-                        "source": "drugs.com",
-                        "raw_url": item.get("url")
-                    })
-        SEARCH_CACHE[clean] = results
-        return results
-    except Exception as e:
-        logger.error(f"Error fetching drugs.com autocomplete for '{query}': {e}")
-        return []
+        url = f"{AUTOCOMPLETE_API}{term}"
+        try:
+            res = StealthyFetcher.fetch(url, headless=True)
+            if res.status != 200:
+                logger.warning(f"Drugs.com search failed for '{term}': status {res.status}")
+                continue
+
+            data = json.loads(res.body)
+            results = []
+            categories = data.get("categories", [])
+            if categories and categories[0].get("results"):
+                for item in categories[0]["results"]:
+                    suggestion = item.get("suggestion", "").replace("+", " ")
+                    ddc_id = item.get("ddc_id")
+                    brand_id = item.get("brand_name_id", 0)
+                    if suggestion and ddc_id is not None:
+                        results.append({
+                            "name": suggestion,
+                            "generic_name": item.get("additional") or None,
+                            "ddc_id": ddc_id,
+                            "brand_name_id": brand_id,
+                            "code": f"{ddc_id}-{brand_id}",
+                            "source": "drugs.com",
+                            "raw_url": item.get("url")
+                        })
+            if results:
+                SEARCH_CACHE[clean] = results
+                SEARCH_CACHE[term] = results
+                return results
+        except Exception as e:
+            logger.error(f"Error fetching drugs.com autocomplete for '{term}': {e}")
+
+    return []
 
 def _sync_parse_report_html(html_content: str, url: str) -> Dict[str, Any]:
     soup = BeautifulSoup(html_content, "html.parser")
     report = {
         "url": url,
-        "title": "",
+        "title": "Drug Interaction Report",
         "drug_interactions": [],
         "duplications": [],
         "food_interactions": [],
-        "disease_interactions": []
+        "disease_interactions": [],
+        "error": None
     }
 
     title_elem = soup.find("h1")
@@ -102,7 +124,8 @@ def _sync_parse_report_html(html_content: str, url: str) -> Dict[str, Any]:
         elif "food" in section_name:
             report["food_interactions"].append(entry)
         elif "disease" in section_name:
-            report["disease_interactions"].append(entry)
+            # Excluded per user requirements
+            continue
         else:
             severity = "Unknown"
             low_title = title_text.lower()
@@ -122,6 +145,17 @@ def _sync_get_interactions(drugs_or_codes: List[str]) -> Dict[str, Any]:
     resolved_codes = []
     resolved_info = []
 
+    default_empty_report = {
+        "url": "",
+        "title": "Drug Interaction Report",
+        "drug_interactions": [],
+        "duplications": [],
+        "food_interactions": [],
+        "disease_interactions": [],
+        "resolved_drugs": [],
+        "error": None
+    }
+
     for item in drugs_or_codes:
         item_str = str(item).strip()
         if "-" in item_str and item_str.replace("-", "").isdigit():
@@ -138,8 +172,9 @@ def _sync_get_interactions(drugs_or_codes: List[str]) -> Dict[str, Any]:
 
     if len(resolved_codes) < 2:
         return {
-            "error": "At least 2 drugs must be resolved to evaluate interactions",
-            "resolved": resolved_info
+            **default_empty_report,
+            "error": f"At least 2 drugs must be resolved to evaluate interactions. Resolved: {[r.get('name') for r in resolved_info]}",
+            "resolved_drugs": resolved_info
         }
 
     cache_key = ",".join(sorted(resolved_codes))
@@ -173,14 +208,25 @@ async def search_endpoint(request: Request):
     return JSONResponse({"results": results, "count": len(results)})
 
 async def interactions_endpoint(request: Request):
+    default_empty = {
+        "url": "",
+        "title": "Drug Interaction Report",
+        "drug_interactions": [],
+        "duplications": [],
+        "food_interactions": [],
+        "disease_interactions": [],
+        "resolved_drugs": [],
+        "error": "Invalid request"
+    }
     try:
         body = await request.json()
     except Exception:
-        return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        return JSONResponse(default_empty, status_code=400)
 
     drugs = body.get("drugs", [])
     if not isinstance(drugs, list) or len(drugs) < 2:
-        return JSONResponse({"error": "Expected 'drugs' array with at least 2 items"}, status_code=400)
+        default_empty["error"] = "Expected 'drugs' array with at least 2 items"
+        return JSONResponse(default_empty, status_code=200)
 
     loop = asyncio.get_running_loop()
     report = await loop.run_in_executor(EXECUTOR, _sync_get_interactions, drugs)

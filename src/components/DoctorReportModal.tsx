@@ -17,7 +17,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
-import type { EvaluatedDrugPair, ExtractedClinicalSymptom } from '../types/rxcheck';
+import type { EvaluatedDrugPair, ExtractedClinicalSymptom, ScrapedInteractionReport } from '../types/rxcheck';
 import { generateClinicalSummaryPdf } from '../utils/generateClinicalPdf';
 
 interface DoctorReportModalProps {
@@ -26,6 +26,7 @@ interface DoctorReportModalProps {
   drugs: string[];
   results: EvaluatedDrugPair[];
   selectedSymptoms: ExtractedClinicalSymptom[];
+  drugsComReport?: ScrapedInteractionReport | null;
 }
 
 export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
@@ -34,14 +35,15 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
   drugs,
   results,
   selectedSymptoms,
+  drugsComReport,
 }) => {
   const theme = useTheme();
   const [copied, setCopied] = useState(false);
 
   const handleDownloadPdf = () => {
     try {
-      const doc = generateClinicalSummaryPdf({ drugs, results, selectedSymptoms });
-      doc.save('RxCheck_Clinical_Summary.pdf');
+      const doc = generateClinicalSummaryPdf({ drugs, results, selectedSymptoms, drugsComReport });
+      doc.save('Clinical_Medication_Summary.pdf');
     } catch (err) {
       console.error('Failed to generate PDF:', err);
     }
@@ -49,7 +51,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
 
   const handleOpenPdf = () => {
     try {
-      const doc = generateClinicalSummaryPdf({ drugs, results, selectedSymptoms });
+      const doc = generateClinicalSummaryPdf({ drugs, results, selectedSymptoms, drugsComReport });
       const blobUrl = doc.output('bloburl');
       window.open(blobUrl, '_blank');
     } catch (err) {
@@ -63,55 +65,92 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
     const timeStr = new Date().toLocaleTimeString();
 
     const sections: string[] = [
-      'RxCheck Clinical Consultation & Medication Review Summary',
-      `Generated: ${dateStr} at ${timeStr}  |  Source: RxCheck Medical Dataset`,
+      'Clinical Consultation & Medication Review Summary',
+      `Generated: ${dateStr} at ${timeStr}`,
       divider,
       '',
       `1. CURRENT PATIENT REGIMEN (${drugs.length} item${drugs.length === 1 ? '' : 's'}):`,
       ...drugs.map(d => `   • ${d}`),
       '',
-      `2. DETECTED CLINICAL INTERACTIONS (${results.length} pair${results.length === 1 ? '' : 's'} evaluated):`,
+    ];
+
+    // Drugs.com advisories if present
+    const dInteractions = drugsComReport?.drug_interactions || [];
+    const dDuplications = drugsComReport?.duplications || [];
+    const dFood = drugsComReport?.food_interactions || [];
+
+    if (dInteractions.length > 0 || dDuplications.length > 0 || dFood.length > 0) {
+      sections.push('2. DRUGS.COM CLINICAL ADVISORIES & PRECAUTIONS:');
+      if (dInteractions.length > 0) {
+        sections.push('   Drug-to-Drug Interactions:');
+        dInteractions.forEach((item, idx) => {
+          sections.push(`   [${idx + 1}] ${item.title} (${item.severity?.toUpperCase() || 'NOTE'})`);
+          sections.push(`       ${item.text}`);
+        });
+      }
+      if (dDuplications.length > 0) {
+        sections.push('   Therapeutic Duplications:');
+        dDuplications.forEach(item => {
+          sections.push(`   • ${item.title}: ${item.text}`);
+        });
+      }
+      if (dFood.length > 0) {
+        sections.push('   Food & Lifestyle Precautions:');
+        dFood.forEach(item => {
+          sections.push(`   • ${item.title}: ${item.text}`);
+        });
+      }
+      sections.push('');
+    }
+
+    sections.push(
+      `3. DETECTED PAIRWISE INTERACTIONS (${results.length} pair${results.length === 1 ? '' : 's'} evaluated):`,
       ...(results.length === 0
-        ? ['   No interaction records found in active dataset (does not establish safety).']
+        ? ['   No pairwise interaction records documented.']
         : results.map((r, i) => {
             const lines = [
               `   [${i + 1}] ${r.drug1} + ${r.drug2}  [${r.severity.toUpperCase()}${r.isHighPriority ? ' - HIGH PRIORITY' : ''}]`,
               `       Clinical Significance: ${r.clinicalSignificance || 'None documented.'}`,
             ];
             if (r.management) {
-              lines.push(`       Management Guidance:   ${r.management}`);
-            }
-            if (r.mechanism) {
-              lines.push(`       Mechanism of Action:   ${r.mechanism}`);
+              lines.push(`       Management Guidance: ${r.management}`);
             }
             return lines.join('\n');
           })),
       '',
-      '3. PATIENT-REPORTED ADVERSE SIGNS & SYMPTOMS:',
+      `4. PATIENT-REPORTED ADVERSE SYMPTOMS (${selectedSymptoms.length} reported):`,
       ...(selectedSymptoms.length === 0
-        ? ['   None reported.']
+        ? ['   None selected by patient.']
         : selectedSymptoms.map(
-            s => `   • ${s.symptomName} (${s.sourcePair})\n     Excerpt: "${s.contextSnippet}"`
+            s => `   • ${s.symptomName}${s.isRedFlag ? ' [CRITICAL/RED FLAG]' : ''} (Related to: ${s.sourcePair})\n     Context: "${s.contextSnippet}"`
           )),
       '',
-      '4. SUGGESTED PRESCRIBER DISCUSSION CHECKLIST:',
-      '   [ ] 1. Are these medications safe to take simultaneously for my clinical condition?',
-      '   [ ] 2. Should any doses be spaced throughout the day to minimize peak concentrations?',
-      '   [ ] 3. Are safer alternatives with lower interaction profiles available?',
-      '   [ ] 4. What specific red-flag warning signs should prompt immediate emergency care?',
-      '   [ ] 5. Do any lifestyle factors (alcohol, supplements) interfere with this regimen?',
+      '5. SUGGESTED QUESTIONS FOR PHYSICIAN / PHARMACIST:',
+      '   [ ] Are these medications safe to take simultaneously for my condition?',
+      '   [ ] Should any doses be spaced throughout the day to minimize peak concentrations?',
+      '   [ ] Are there safer alternative medications with lower interaction risks?',
+      '   [ ] What specific warning signs should prompt immediate medical evaluation?',
+      '   [ ] Do any lifestyle factors, alcohol, or supplements interfere with this regimen?',
       '',
       divider,
-      'Clinical Disclaimer: RxCheck provides records from active medical datasets and does not replace professional clinical judgment. Always consult a licensed medical provider before making medication changes.',
-    ];
+      'Clinical Disclaimer: This report aggregates documented medical interaction records and safety warnings for consultation purposes. It does not replace professional clinical judgment. Always consult a licensed healthcare provider before modifying any medication regimen.'
+    );
 
     return sections.join('\n');
   };
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(generateReportText());
-    setCopied(true);
+  const handleCopyText = async () => {
+    try {
+      await navigator.clipboard.writeText(generateReportText());
+      setCopied(true);
+    } catch (err) {
+      console.error('Failed to copy report text:', err);
+    }
   };
+
+  const criticalSymptoms = selectedSymptoms.filter(s => s.isRedFlag);
+  const majorInteractions = results.filter(r => r.severity === 'major');
+  const dInteractions = drugsComReport?.drug_interactions || [];
 
   return (
     <>
@@ -121,45 +160,104 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
         maxWidth="md"
         fullWidth
         scroll="paper"
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              maxHeight: '90vh',
+              backgroundImage: 'none',
+            },
+          },
+        }}
       >
-        {/* Dialog Header */}
+        {/* Header */}
         <DialogTitle
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            py: 2,
-            px: { xs: 2.5, md: 3 },
+            pb: 1.5,
             borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <MedicalServicesIcon color="primary" sx={{ fontSize: 32 }} />
-            <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1rem', sm: '1.15rem' }, lineHeight: 1.2 }}>
-                Physician Consultation & Medication Review Summary
+            <MedicalServicesIcon color="primary" sx={{ fontSize: 28 }} />
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                Doctor Consultation Summary
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ mt: 0.3, lineHeight: 1 }}>
-                Generated {new Date().toLocaleDateString()} &bull; RxCheck Clinical Dataset
+                Formatted for physician or pharmacist consultation
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            size="small"
+            color="inherit"
+            onClick={onClose}
+            sx={{ minWidth: 36, p: 0.5, borderRadius: 2 }}
+          >
+            <CloseIcon fontSize="small" />
+          </Button>
+        </DialogTitle>
+
+        {/* Content */}
+        <DialogContent sx={{ p: 3 }}>
+          {/* Quick Stats Pill Header */}
+          <Box
+            sx={{
+              p: 2,
+              mb: 3,
+              borderRadius: 2,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+              border: `1px solid ${theme.palette.divider}`,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Medications
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 800 }}>
+                {drugs.length}
+              </Typography>
+            </Box>
+            <Divider orientation="vertical" flexItem />
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Interactions Found
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontWeight: 800,
+                  color: majorInteractions.length > 0 || dInteractions.length > 0 ? 'error.main' : 'text.primary',
+                }}
+              >
+                {results.filter(r => r.status === 'interaction_found').length + dInteractions.length}
+              </Typography>
+            </Box>
+            <Divider orientation="vertical" flexItem />
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Critical Symptoms
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontWeight: 800,
+                  color: criticalSymptoms.length > 0 ? 'error.main' : 'text.primary',
+                }}
+              >
+                {criticalSymptoms.length}
               </Typography>
             </Box>
           </Box>
 
-          <Button
-            onClick={onClose}
-            color="inherit"
-            size="small"
-            startIcon={<CloseIcon />}
-            sx={{ color: 'text.secondary' }}
-          >
-            Close
-          </Button>
-        </DialogTitle>
-
-        {/* Dialog Content: Rich UI view restored */}
-        <DialogContent sx={{ p: { xs: 2.5, md: 3 } }}>
-          {/* Section 1: Active Regimen */}
-          <Box sx={{ mb: 2.5 }}>
+          {/* Section 1: Regimen */}
+          <Box sx={{ mb: 3 }}>
             <Typography
               variant="caption"
               sx={{
@@ -171,28 +269,64 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                 mb: 1,
               }}
             >
-              1. Evaluated Patient Regimen ({drugs.length} Substances):
+              1. Current Medication Regimen ({drugs.length}):
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {drugs.map((drug, idx) => (
-                <Chip
-                  key={idx}
-                  label={drug}
-                  variant="outlined"
-                  sx={{
-                    fontWeight: 700,
-                    bgcolor: 'action.hover',
-                    borderRadius: 2,
-                  }}
-                />
+              {drugs.map((d, i) => (
+                <Chip key={i} label={d} sx={{ fontWeight: 700 }} />
               ))}
             </Box>
           </Box>
 
-          <Divider sx={{ my: 2 }} />
+          {/* Section 2: Drugs.com Findings if present */}
+          {dInteractions.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                  color: 'primary.main',
+                  display: 'block',
+                  mb: 1,
+                }}
+              >
+                2. Drugs.com Clinical Advisories ({dInteractions.length}):
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {dInteractions.map((item, idx) => (
+                  <Box
+                    key={idx}
+                    sx={{
+                      p: 1.8,
+                      borderRadius: 2,
+                      border: `1px solid ${theme.palette.divider}`,
+                      bgcolor: 'action.hover',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                        {item.title}
+                      </Typography>
+                      <Chip
+                        label={item.severity?.toUpperCase() || 'WARNING'}
+                        size="small"
+                        color={item.severity?.toLowerCase() === 'major' ? 'error' : 'warning'}
+                        sx={{ fontWeight: 800, height: 22, fontSize: '0.7rem' }}
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.82rem', lineHeight: 1.5 }}>
+                      {item.text}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
 
-          {/* Section 2: Clinical Interactions */}
-          <Box sx={{ mb: 2.5 }}>
+          {/* Section 3: Detected Pairwise Interactions */}
+          <Box sx={{ mb: 3 }}>
             <Typography
               variant="caption"
               sx={{
@@ -204,12 +338,12 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                 mb: 1,
               }}
             >
-              2. Detected Clinical Interactions (from RxCheck Dataset):
+              {dInteractions.length > 0 ? '3.' : '2.'} Pairwise Clinical Interactions:
             </Typography>
 
             {results.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
-                No pairwise interaction records documented in the current dataset.
+                No pairwise interaction records documented.
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -249,26 +383,26 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                             ? 'warning'
                             : 'default'
                         }
-                        sx={{ fontWeight: 800, fontSize: '0.65rem', height: 22 }}
+                        sx={{ fontWeight: 800, height: 22, fontSize: '0.7rem' }}
                       />
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>
                         {res.drug1} + {res.drug2}
                       </Typography>
                     </Box>
-                    <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5, lineHeight: 1.45 }}>
-                      {res.clinicalSignificance || 'No matching interaction found in current dataset (safety unverified).'}
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.82rem', mt: 0.5 }}>
+                      {res.clinicalSignificance || 'No documented interaction.'}
                     </Typography>
                     {res.management && (
                       <Typography
                         variant="caption"
                         sx={{
-                          color: 'text.secondary',
-                          fontWeight: 600,
                           display: 'block',
-                          lineHeight: 1.35,
+                          mt: 0.8,
+                          fontWeight: 700,
+                          color: 'warning.main',
                         }}
                       >
-                        <strong>Clinical Management:</strong> {res.management}
+                        Guidance: {res.management}
                       </Typography>
                     )}
                   </Box>
@@ -277,10 +411,8 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
             )}
           </Box>
 
-          <Divider sx={{ my: 2 }} />
-
-          {/* Section 3: Reported Symptoms */}
-          <Box sx={{ mb: 2.5 }}>
+          {/* Section 4: Patient Symptoms */}
+          <Box sx={{ mb: 3 }}>
             <Typography
               variant="caption"
               sx={{
@@ -292,33 +424,34 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                 mb: 1,
               }}
             >
-              3. Patient-Reported Adverse Signs & Symptoms:
+              {dInteractions.length > 0 ? '4.' : '3.'} Patient-Reported Adverse Symptoms ({selectedSymptoms.length}):
             </Typography>
+
             {selectedSymptoms.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', fontStyle: 'italic' }}>
-                None reported.
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                No adverse symptoms reported.
               </Typography>
             ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8 }}>
-                {selectedSymptoms.map((c, i) => (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {selectedSymptoms.map((sym, i) => (
                   <Box
                     key={i}
                     sx={{
-                      p: 1.2,
+                      p: 1.5,
                       borderRadius: 1.5,
-                      border: `1px solid ${c.isRedFlag ? theme.palette.error.main : theme.palette.divider}`,
-                      bgcolor: c.isRedFlag
-                        ? theme.palette.mode === 'dark'
-                          ? 'rgba(239, 68, 68, 0.1)'
-                          : 'rgba(254, 242, 242, 0.8)'
-                        : 'action.hover',
+                      bgcolor: sym.isRedFlag ? 'rgba(239, 68, 68, 0.1)' : 'action.hover',
+                      border: `1px solid ${sym.isRedFlag ? theme.palette.error.main : theme.palette.divider}`,
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.82rem' }}>
-                      &bull; {c.symptomName} <span style={{ fontWeight: 400, opacity: 0.75 }}>({c.sourcePair})</span>
+                    <Typography variant="body2" sx={{ fontWeight: 800, color: sym.isRedFlag ? 'error.main' : 'inherit' }}>
+                      {sym.isRedFlag && '[CRITICAL] '}
+                      {sym.symptomName}
+                      <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        (Associated with: {sym.sourcePair})
+                      </Typography>
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', mt: 0.3 }}>
-                      &ldquo;{c.contextSnippet}&rdquo;
+                      "{sym.contextSnippet}"
                     </Typography>
                   </Box>
                 ))}
@@ -326,9 +459,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
             )}
           </Box>
 
-          <Divider sx={{ my: 2 }} />
-
-          {/* Section 4: Discussion Checklist */}
+          {/* Section 5: Doctor Questions Checklist */}
           <Box>
             <Typography
               variant="caption"
@@ -338,22 +469,22 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
                 letterSpacing: 0.6,
                 color: 'primary.main',
                 display: 'block',
-                mb: 1.2,
+                mb: 1,
               }}
             >
-              4. Suggested Discussion Checklist for Your Doctor:
+              {dInteractions.length > 0 ? '5.' : '4.'} Discussion Checklist for Your Doctor:
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8 }}>
               {[
                 'Are these medications safe to take simultaneously for my condition?',
                 'Should any doses be spaced throughout the day to minimize peak concentrations?',
-                'Are there safer alternative medications with lower interaction profiles?',
-                'What specific warning signs should prompt immediate emergency care?',
+                'Are there safer alternative medications with lower interaction risks?',
+                'What specific warning signs should prompt immediate medical evaluation?',
                 'Do any lifestyle factors, alcohol, or supplements interfere with this regimen?',
               ].map((q, idx) => (
-                <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CheckBoxIcon sx={{ fontSize: 18, color: 'primary.main' }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                  <CheckBoxIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
                     {q}
                   </Typography>
                 </Box>
@@ -362,42 +493,44 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
           </Box>
         </DialogContent>
 
-        {/* Dialog Actions */}
+        {/* Actions */}
         <DialogActions
           sx={{
-            p: 2,
             px: 3,
+            py: 2,
             borderTop: `1px solid ${theme.palette.divider}`,
-            justifyContent: 'space-between',
+            gap: 1,
+            flexWrap: 'wrap',
           }}
         >
           <Button
             startIcon={<ContentCopyIcon />}
+            variant="outlined"
             onClick={handleCopyText}
-            color="inherit"
-            size="small"
+            sx={{ fontWeight: 700 }}
           >
-            Copy Text
+            Copy Summary Text
           </Button>
 
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<PictureAsPdfIcon />}
-              onClick={handleOpenPdf}
-            >
-              View PDF
-            </Button>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<PictureAsPdfIcon />}
-              onClick={handleDownloadPdf}
-            >
-              Download PDF
-            </Button>
-          </Box>
+          <Button
+            startIcon={<PictureAsPdfIcon />}
+            variant="contained"
+            color="primary"
+            onClick={handleOpenPdf}
+            sx={{ fontWeight: 800 }}
+          >
+            Preview PDF
+          </Button>
+
+          <Button
+            startIcon={<PictureAsPdfIcon />}
+            variant="contained"
+            color="secondary"
+            onClick={handleDownloadPdf}
+            sx={{ fontWeight: 800 }}
+          >
+            Download PDF
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -405,7 +538,7 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
         open={copied}
         autoHideDuration={3000}
         onClose={() => setCopied(false)}
-        message="Summary text copied to clipboard!"
+        message="Doctor consultation summary copied to clipboard"
       />
     </>
   );

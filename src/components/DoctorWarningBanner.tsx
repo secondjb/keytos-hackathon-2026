@@ -109,7 +109,7 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', lineHeight: 1.5, pl: { sm: 4.2 } }}>
-              No matching record exists in the active RxCheck dataset for one or more pairs.
+              No documented interaction was found for one or more pairs.
               <strong> The absence of an interaction record does NOT establish clinical safety. </strong>
               Always verify safety with your healthcare provider.
             </Typography>

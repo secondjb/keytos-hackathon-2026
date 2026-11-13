@@ -107,6 +107,7 @@ export interface ScrapedInteractionReport {
   food_interactions: ScrapedInteractionItem[];
   disease_interactions: ScrapedInteractionItem[];
   resolved_drugs?: Array<{ code: string; name: string }>;
+  error?: string | null;
 }
 
 export interface RxCheckPolypharmacySummary {

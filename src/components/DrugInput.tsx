@@ -13,12 +13,6 @@ import {
   IconButton,
   Divider,
   Alert,
-  Chip,
-  ToggleButtonGroup,
-  ToggleButton,
-  Tooltip,
-  FormControlLabel,
-  Switch,
   useTheme,
 } from '@mui/material';
 import MedicationIcon from '@mui/icons-material/Medication';
@@ -26,23 +20,15 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
-import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import DatasetIcon from '@mui/icons-material/Dataset';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
-import { searchDrugsUnified, checkScraperHealth } from '../services/scraperApi';
+import { searchDrugsUnified } from '../services/scraperApi';
 import type { RxCheckDrugSearchResult } from '../types/rxcheck';
-
-export type SearchSourceMode = 'all' | 'drugscom' | 'rxcheck';
 
 interface DrugInputProps {
   drugs: string[];
   onChangeDrugs: (drugs: string[]) => void;
   onEvaluate: () => void;
   isLoading: boolean;
-  includeDrugsComScrape?: boolean;
-  onToggleDrugsComScrape?: (include: boolean) => void;
 }
 
 const formatDrugLabel = (option: string | RxCheckDrugSearchResult): string => {
@@ -61,43 +47,28 @@ export const DrugInput: React.FC<DrugInputProps> = ({
   onChangeDrugs,
   onEvaluate,
   isLoading,
-  includeDrugsComScrape = true,
-  onToggleDrugsComScrape,
 }) => {
   const theme = useTheme();
   const [inputValue, setInputValue] = useState('');
   const [options, setOptions] = useState<RxCheckDrugSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [inputError, setInputError] = useState('');
-  const [searchMode, setSearchMode] = useState<SearchSourceMode>('all');
-  const [scraperAvailable, setScraperAvailable] = useState<boolean>(true);
 
-  // Check scraper health on mount
-  useEffect(() => {
-    checkScraperHealth().then(status => {
-      setScraperAvailable(status.available);
-    });
-  }, []);
-
-  // Dynamic live search unified with Scrapling Drugs.com scraper & RxCheck
+  // Primary search: queries Drugs.com first, falls back to RxCheck
   useEffect(() => {
     const query = inputValue.trim();
-    if (query.length < 2) {
-      setOptions([]);
-      setIsSearching(false);
-      return;
-    }
+    if (query.length < 2) return;
 
     setIsSearching(true);
     setInputError('');
     const timer = setTimeout(async () => {
-      const results = await searchDrugsUnified(query, searchMode);
+      const results = await searchDrugsUnified(query);
       setOptions(results);
       setIsSearching(false);
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [inputValue, searchMode]);
+  }, [inputValue]);
 
   const handleAddDrug = (candidate: string | RxCheckDrugSearchResult) => {
     setInputError('');
@@ -122,141 +93,20 @@ export const DrugInput: React.FC<DrugInputProps> = ({
 
   const numPairs = drugs.length >= 2 ? (drugs.length * (drugs.length - 1)) / 2 : 0;
 
-  const renderSourceChip = (source?: 'rxcheck' | 'drugs.com' | 'both') => {
-    if (source === 'drugs.com') {
-      return (
-        <Chip
-          size="small"
-          icon={<TravelExploreIcon sx={{ fontSize: '13px !important' }} />}
-          label="Drugs.com"
-          sx={{
-            height: 20,
-            fontSize: '0.65rem',
-            fontWeight: 800,
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(147, 51, 234, 0.12)',
-            color: theme.palette.mode === 'dark' ? '#c084fc' : '#7e22ce',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(147, 51, 234, 0.2)'}`,
-          }}
-        />
-      );
-    }
-    if (source === 'both') {
-      return (
-        <Chip
-          size="small"
-          icon={<CheckCircleIcon sx={{ fontSize: '13px !important' }} />}
-          label="Verified in Both"
-          sx={{
-            height: 20,
-            fontSize: '0.65rem',
-            fontWeight: 800,
-            bgcolor: 'rgba(16, 185, 129, 0.15)',
-            color: '#10b981',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-          }}
-        />
-      );
-    }
-    return (
-      <Chip
-        size="small"
-        icon={<DatasetIcon sx={{ fontSize: '13px !important' }} />}
-        label="RxCheck"
-        sx={{
-          height: 20,
-          fontSize: '0.65rem',
-          fontWeight: 800,
-          bgcolor: theme.palette.mode === 'dark' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.1)',
-          color: theme.palette.mode === 'dark' ? '#38bdf8' : '#0284c7',
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.2)'}`,
-        }}
-      />
-    );
-  };
-
   return (
     <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-        {/* Header: Centered vertically */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <MedicationIcon color="primary" sx={{ fontSize: 32 }} />
-            <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                Medication Search
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.2 }}>
-                Powered by Scrapling scraper + RxCheck dataset
-              </Typography>
-            </Box>
+        {/* Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <MedicationIcon color="primary" sx={{ fontSize: 32 }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+              Medication Search
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.2 }}>
+              Search medications, brand names, or active substances
+            </Typography>
           </Box>
-
-          {/* Engine Status Indicator */}
-          <Tooltip title={scraperAvailable ? "Scrapling headless scraper engine is connected and bypassing Cloudflare" : "Scrapling scraper server offline, using fallback"}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.8,
-                px: 1.2,
-                py: 0.4,
-                borderRadius: 4,
-                bgcolor: scraperAvailable ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                border: `1px solid ${scraperAvailable ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-              }}
-            >
-              <Box
-                sx={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  bgcolor: scraperAvailable ? '#10b981' : '#ef4444',
-                  boxShadow: scraperAvailable ? '0 0 8px #10b981' : 'none',
-                }}
-              />
-              <Typography variant="caption" sx={{ fontWeight: 700, color: scraperAvailable ? '#10b981' : '#ef4444', fontSize: '0.68rem' }}>
-                {scraperAvailable ? 'Scraper Live' : 'Scraper Offline'}
-              </Typography>
-            </Box>
-          </Tooltip>
-        </Box>
-
-        {/* Source Provider Selector inside Search Box */}
-        <Box sx={{ mb: 1.5 }}>
-          <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 0.6 }}>
-            SEARCH SOURCE:
-          </Typography>
-          <ToggleButtonGroup
-            value={searchMode}
-            exclusive
-            onChange={(_, newMode) => {
-              if (newMode) setSearchMode(newMode);
-            }}
-            size="small"
-            fullWidth
-            sx={{
-              height: 32,
-              '& .MuiToggleButton-root': {
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                textTransform: 'none',
-                py: 0,
-              },
-            }}
-          >
-            <ToggleButton value="all">
-              <AutoAwesomeIcon sx={{ fontSize: 14, mr: 0.6 }} />
-              All Sources
-            </ToggleButton>
-            <ToggleButton value="drugscom">
-              <TravelExploreIcon sx={{ fontSize: 14, mr: 0.6 }} />
-              Drugs.com (Scraper)
-            </ToggleButton>
-            <ToggleButton value="rxcheck">
-              <DatasetIcon sx={{ fontSize: 14, mr: 0.6 }} />
-              RxCheck
-            </ToggleButton>
-          </ToggleButtonGroup>
         </Box>
 
         {/* Autocomplete Input */}
@@ -272,8 +122,14 @@ export const DrugInput: React.FC<DrugInputProps> = ({
             onInputChange={(_, newInputValue, reason) => {
               if (reason === 'input' || reason === 'clear') {
                 setInputValue(newInputValue);
+                if (newInputValue.trim().length < 2) {
+                  setOptions([]);
+                  setIsSearching(false);
+                }
               } else if (reason === 'reset') {
                 setInputValue('');
+                setOptions([]);
+                setIsSearching(false);
               }
               if (inputError) setInputError('');
             }}
@@ -287,14 +143,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               return (
                 <TextField
                   {...restParams}
-                  placeholder="Search drug (e.g. aspirin, ibuprofen, warfarin)..."
-                  helperText={
-                    searchMode === 'drugscom'
-                      ? 'Live autocomplete scraped directly from Drugs.com'
-                      : searchMode === 'all'
-                      ? 'Unified search: Drugs.com scraper + RxCheck dataset'
-                      : 'Searching RxCheck clinical dataset'
-                  }
+                  placeholder="Search medication (e.g. Aspirin, Warfarin, Metformin)..."
                   onKeyDown={e => {
                     if (e.key === 'Enter' && inputValue.trim()) {
                       e.preventDefault();
@@ -324,6 +173,23 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                 />
               );
             }}
+            slotProps={{
+              popper: {
+                sx: {
+                  '& .MuiAutocomplete-paper': {
+                    textAlign: 'left',
+                  },
+                  '& .MuiAutocomplete-listbox': {
+                    textAlign: 'left',
+                    '& .MuiAutocomplete-option': {
+                      textAlign: 'left !important',
+                      justifyContent: 'flex-start !important',
+                      alignItems: 'flex-start !important',
+                    },
+                  },
+                },
+              },
+            }}
             renderOption={(props, option) => {
               const { key, ...restProps } = props;
               const formatted = formatDrugLabel(option);
@@ -334,36 +200,48 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                   component="li"
                   {...restProps}
                   sx={{
-                    py: 1,
-                    px: 1.5,
+                    py: 1.2,
+                    px: 2,
                     width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 1,
+                    display: 'flex !important',
+                    flexDirection: 'column !important',
+                    alignItems: 'flex-start !important',
+                    justifyContent: 'flex-start !important',
+                    textAlign: 'left !important',
                   }}
                 >
-                  <Box sx={{ overflow: 'hidden' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
-                      {formatted}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 700,
+                      textAlign: 'left !important',
+                      width: '100%',
+                      display: 'block',
+                    }}
+                  >
+                    {formatted}
+                  </Typography>
+                  {option.generic_name && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        textAlign: 'left !important',
+                        width: '100%',
+                        display: 'block',
+                      }}
+                    >
+                      {option.generic_name}
                     </Typography>
-                    {option.generic_name && (
-                      <Typography variant="caption" color="text.secondary" noWrap>
-                        {option.generic_name}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Box sx={{ flexShrink: 0 }}>
-                    {renderSourceChip(option.source)}
-                  </Box>
+                  )}
                 </Box>
               );
             }}
             noOptionsText={
               inputValue.trim().length >= 2
                 ? isSearching
-                  ? 'Querying Drugs.com scraper & RxCheck...'
-                  : 'No matching records found. Press Enter or + to add custom drug.'
+                  ? 'Searching medications...'
+                  : 'No matching medications found. Press Enter or + to add.'
                 : 'Type at least 2 characters to search'
             }
           />
@@ -386,7 +264,6 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               minWidth: 56,
               borderRadius: 2,
               p: 0,
-              mb: '23px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -435,11 +312,11 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                 No medications added yet.
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                Search and add at least 2 medications or substances to evaluate pairwise interactions.
+                Add at least 2 medications to check interactions and safety advisories.
               </Typography>
             </Box>
           ) : (
-            <List disablePadding sx={{ maxHeight: 260, overflowY: 'auto' }}>
+            <List disablePadding sx={{ maxHeight: 280, overflowY: 'auto' }}>
               {drugs.map((drugName, idx) => (
                 <ListItem
                   key={drugName + idx}
@@ -470,33 +347,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
           )}
         </Box>
 
-        <Divider sx={{ my: 2 }} />
-
-        {/* Option: Include Drugs.com Web Scrape */}
-        {onToggleDrugsComScrape && (
-          <Box sx={{ mb: 2, px: 0.5 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={includeDrugsComScrape}
-                  onChange={e => onToggleDrugsComScrape(e.target.checked)}
-                  color="secondary"
-                  size="small"
-                />
-              }
-              label={
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.82rem' }}>
-                    Include Drugs.com Clinical Scrape
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Scrapes full clinical reports, duplications, and food/disease risks
-                  </Typography>
-                </Box>
-              }
-            />
-          </Box>
-        )}
+        <Divider sx={{ my: 2.5 }} />
 
         {/* Evaluation Action Button */}
         <Box>
@@ -511,7 +362,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
             sx={{ py: 1.4, fontWeight: 800 }}
           >
             {isLoading
-              ? 'Analyzing & Scraping Interactions...'
+              ? 'Analyzing Interactions...'
               : drugs.length < 2
               ? 'Add at least 2 Drugs to Check'
               : `Check Interactions (${numPairs} pair${numPairs === 1 ? '' : 's'})`}

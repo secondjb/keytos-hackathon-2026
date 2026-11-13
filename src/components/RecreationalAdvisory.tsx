@@ -65,10 +65,10 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ resu
           <ShieldIcon color="secondary" fontSize="large" />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800, color: 'secondary.main' }}>
-              Lifestyle & Recreational Substance Advisory (RxCheck Analysis)
+              Lifestyle & Substance Safety Advisory
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Evaluating clinical dataset records for: {recreationalInRegimen.join(', ')}
+              Safety evaluation for: {recreationalInRegimen.join(', ')}
             </Typography>
           </Box>
         </Box>
@@ -93,7 +93,7 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ resu
                   {item.drug1} + {item.drug2}
                 </Typography>
                 <Chip
-                  label={item.severity === 'major' ? 'MAJOR RISK' : item.severity === 'moderate' ? 'MODERATE RISK' : item.status === 'no_record_found' ? 'NO RECORD IN DATASET' : 'EVALUATED'}
+                  label={item.severity === 'major' ? 'MAJOR RISK' : item.severity === 'moderate' ? 'MODERATE RISK' : item.status === 'no_record_found' ? 'NO INTERACTION' : 'EVALUATED'}
                   color={item.severity === 'major' ? 'error' : item.severity === 'moderate' ? 'warning' : 'default'}
                   size="small"
                   sx={{ fontWeight: 700, fontSize: '0.72rem' }}
@@ -101,7 +101,7 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ resu
               </Box>
 
               <Typography variant="body2" sx={{ color: 'text.primary', mb: 1 }}>
-                {item.clinicalSignificance || 'No clinical interaction record found in the current RxCheck dataset.'}
+                {item.clinicalSignificance || 'No documented interaction found.'}
               </Typography>
 
               {item.management && (

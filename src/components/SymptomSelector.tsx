@@ -35,13 +35,10 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
             <HealingIcon color="primary" fontSize="large" />
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Clinical Adverse Signs & Symptoms (RxCheck Dataset)
+                Clinical Signs & Symptoms to Watch For
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}>
-                No adverse symptom records found in the active RxCheck dataset for this medication regimen.
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }}>
-                (Adverse symptoms and warning signs will be dynamically extracted directly from the RxCheck clinical interaction records.)
+                No adverse symptoms or warning signs flagged for this medication regimen.
               </Typography>
             </Box>
           </Box>
@@ -60,10 +57,10 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
           <HealingIcon color="primary" fontSize="large" />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Clinical Symptoms & Adverse Warning Signs ({symptoms.length} Extracted from RxCheck Records)
+              Clinical Symptoms & Warning Signs ({symptoms.length})
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              The following symptoms are documented in the active RxCheck records for your regimen.
+              The following symptoms may be associated with your medications.
               Select any symptoms you are experiencing to evaluate urgency:
             </Typography>
           </Box>
@@ -116,7 +113,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
               CRITICAL EMERGENCY SYMPTOM DETECTED
             </AlertTitle>
             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              You selected symptoms flagged as critical adverse reactions in the RxCheck clinical record.
+              You selected symptoms flagged as critical adverse reactions.
               Seek immediate emergency medical evaluation (call 911 or visit the nearest ER) and inform the
               clinical team of your current medications.
             </Typography>
@@ -127,7 +124,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
         {selectedSymptomsList.length > 0 && (
           <Stack spacing={1.5} sx={{ mt: 2.5 }}>
             <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'text.secondary' }}>
-              RxCheck Clinical Dataset Excerpt:
+              Clinical Context & Mechanism:
             </Typography>
             {selectedSymptomsList.map(s => (
               <Box

@@ -159,7 +159,7 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
         <Typography variant="body1" sx={{ fontWeight: 500, lineHeight: 1.6, color: 'text.primary', mb: 1.5 }}>
           {item.clinicalSignificance ||
             (item.status === 'no_record_found'
-              ? 'No matching interaction record exists in the active RxCheck dataset. Remember: lack of documented data does not guarantee safety. Always verify with your doctor or pharmacist.'
+              ? 'No documented interaction was found between these medications. Remember: lack of documented data does not guarantee safety. Always verify with your doctor or pharmacist.'
               : 'Consult clinical literature for specific pharmacology.')}
         </Typography>
 

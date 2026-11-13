@@ -1,16 +1,15 @@
 import { jsPDF } from 'jspdf';
-import type { EvaluatedDrugPair, ExtractedClinicalSymptom } from '../types/rxcheck';
+import type { EvaluatedDrugPair, ExtractedClinicalSymptom, ScrapedInteractionReport } from '../types/rxcheck';
 
 export interface GeneratePdfOptions {
   drugs: string[];
   results: EvaluatedDrugPair[];
   selectedSymptoms: ExtractedClinicalSymptom[];
+  drugsComReport?: ScrapedInteractionReport | null;
 }
 
 /**
- * Sanitizes all text to clean WinAnsi / ASCII standard characters.
- * Prevents jsPDF from falling into UTF-16 fallback encoding, which introduces
- * wide null-byte spacing and awkward justification between characters.
+ * Sanitizes text to clean ASCII characters to prevent UTF-16 spacing distortion in jsPDF.
  */
 function cleanPdfText(str: string): string {
   if (!str) return '';
@@ -21,15 +20,16 @@ function cleanPdfText(str: string): string {
     .replace(/[‘’]/g, "'")
     .replace(/[–—]/g, '-')
     .replace(/•/g, '*')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '') // remove zero-width spaces
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .normalize('NFKD')
-    .replace(/[^\x00-\x7F]/g, '');
+    .replace(/[^\x20-\x7E\r\n\t]/g, '');
 }
 
 export function generateClinicalSummaryPdf({
   drugs,
   results,
   selectedSymptoms,
+  drugsComReport,
 }: GeneratePdfOptions): jsPDF {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -49,7 +49,7 @@ export function generateClinicalSummaryPdf({
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
-    doc.text('RxCheck Clinical Consultation & Medication Review Summary', marginX, 22);
+    doc.text('Clinical Medication Review & Interaction Summary', marginX, 22);
     doc.text(`Page ${doc.getNumberOfPages()}`, pageWidth - marginX, 22, { align: 'right' });
     doc.setDrawColor(220, 225, 230);
     doc.setLineWidth(0.5);
@@ -71,7 +71,7 @@ export function generateClinicalSummaryPdf({
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
   doc.setTextColor(255, 255, 255);
-  doc.text('RxCheck Clinical Consultation Summary', marginX + 16, y + 23);
+  doc.text('Clinical Consultation & Interaction Summary', marginX + 16, y + 23);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -86,7 +86,7 @@ export function generateClinicalSummaryPdf({
     minute: '2-digit',
   });
   doc.text(
-    `Generated: ${dateStr} at ${timeStr}  |  Source: RxCheck Dataset (api.rxcheck.dev)`,
+    `Generated: ${dateStr} at ${timeStr}  |  Medication Regimen Review`,
     marginX + 16,
     y + 40
   );
@@ -94,7 +94,6 @@ export function generateClinicalSummaryPdf({
   y += 66;
 
   // SECTION 1: Active Regimen
-  // Keep title close to card (6pt gap) rather than centered in open whitespace
   checkPageBreak(50);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
@@ -102,7 +101,6 @@ export function generateClinicalSummaryPdf({
   doc.text(`1. EVALUATED PATIENT REGIMEN (${drugs.length} SUBSTANCES)`, marginX, y);
   y += 6;
 
-  // Box for drugs
   doc.setFillColor(248, 250, 252); // slate-50
   doc.setDrawColor(226, 232, 240); // slate-200
   doc.setLineWidth(1);
@@ -124,16 +122,158 @@ export function generateClinicalSummaryPdf({
     drugY += 15;
   });
 
-  y += regimenBoxHeight + 18;
+  y += regimenBoxHeight + 16;
 
-  // SECTION 2: Clinical Interactions
-  // Section title sits close to the first interaction card
+  // SECTION 2: Drugs.com Comprehensive Clinical Advisories (if available)
+  let sectionNum = 2;
+  const dInteractions = drugsComReport?.drug_interactions || [];
+  const dDuplications = drugsComReport?.duplications || [];
+  const dFood = drugsComReport?.food_interactions || [];
+
+  if (dInteractions.length > 0 || dDuplications.length > 0 || dFood.length > 0) {
+    checkPageBreak(60);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(
+      `${sectionNum}. DRUGS.COM CLINICAL ADVISORIES & PRECAUTIONS`,
+      marginX,
+      y
+    );
+    y += 6;
+
+    // Drug-to-Drug Warnings from Drugs.com
+    dInteractions.forEach((item, index) => {
+      const cleanTitle = cleanPdfText(item.title);
+      const cleanDesc = cleanPdfText(item.text);
+      const isMajor = item.severity?.toLowerCase() === 'major';
+      const isModerate = item.severity?.toLowerCase() === 'moderate';
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      const descLines = doc.splitTextToSize(cleanDesc, contentWidth - 28);
+      const cardHeight = 28 + descLines.length * 12 + 6;
+
+      checkPageBreak(cardHeight + 6);
+
+      if (isMajor) {
+        doc.setFillColor(254, 242, 242);
+        doc.setDrawColor(248, 113, 113);
+      } else if (isModerate) {
+        doc.setFillColor(255, 251, 235);
+        doc.setDrawColor(251, 191, 36);
+      } else {
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+      }
+      doc.setLineWidth(1);
+      doc.roundedRect(marginX, y, contentWidth, cardHeight, 4, 4, 'FD');
+
+      // Title & Badge
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${index + 1}.  ${cleanTitle}`, marginX + 14, y + 16);
+
+      const badgeText = isMajor ? 'MAJOR RISK' : isModerate ? 'MODERATE RISK' : 'MINOR RISK';
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      const bWidth = doc.getTextWidth(badgeText) + 14;
+      const bX = pageWidth - marginX - bWidth - 12;
+
+      if (isMajor) {
+        doc.setFillColor(220, 38, 38);
+        doc.setTextColor(255, 255, 255);
+      } else if (isModerate) {
+        doc.setFillColor(217, 119, 6);
+        doc.setTextColor(255, 255, 255);
+      } else {
+        doc.setFillColor(14, 165, 233);
+        doc.setTextColor(255, 255, 255);
+      }
+      doc.roundedRect(bX, y + 6, bWidth, 14, 3, 3, 'F');
+      doc.text(badgeText, bX + bWidth / 2, y + 16, { align: 'center' });
+
+      // Description
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(51, 65, 85);
+      doc.text(descLines, marginX + 14, y + 29);
+
+      y += cardHeight + 6;
+    });
+
+    // Therapeutic Duplications
+    if (dDuplications.length > 0) {
+      dDuplications.forEach(item => {
+        const cleanTitle = cleanPdfText(item.title);
+        const cleanDesc = cleanPdfText(item.text);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        const descLines = doc.splitTextToSize(cleanDesc, contentWidth - 28);
+        const cardHeight = 26 + descLines.length * 12 + 4;
+
+        checkPageBreak(cardHeight + 6);
+        doc.setFillColor(255, 251, 235); // amber-50
+        doc.setDrawColor(251, 191, 36); // amber-400
+        doc.roundedRect(marginX, y, contentWidth, cardHeight, 4, 4, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(180, 83, 9);
+        doc.text(`[DUPLICATION WARNING] ${cleanTitle}`, marginX + 14, y + 15);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(51, 65, 85);
+        doc.text(descLines, marginX + 14, y + 27);
+
+        y += cardHeight + 6;
+      });
+    }
+
+    // Food, Alcohol & Dietary Precautions
+    if (dFood.length > 0) {
+      dFood.forEach(item => {
+        const cleanTitle = cleanPdfText(item.title);
+        const cleanDesc = cleanPdfText(item.text);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        const descLines = doc.splitTextToSize(cleanDesc, contentWidth - 28);
+        const cardHeight = 26 + descLines.length * 12 + 4;
+
+        checkPageBreak(cardHeight + 6);
+        doc.setFillColor(240, 249, 255); // sky-50
+        doc.setDrawColor(186, 230, 253); // sky-200
+        doc.roundedRect(marginX, y, contentWidth, cardHeight, 4, 4, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(2, 132, 199);
+        doc.text(`[FOOD & LIFESTYLE] ${cleanTitle}`, marginX + 14, y + 15);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(51, 65, 85);
+        doc.text(descLines, marginX + 14, y + 27);
+
+        y += cardHeight + 6;
+      });
+    }
+
+    y += 12;
+    sectionNum++;
+  }
+
+  // SECTION: Pairwise Interaction Evaluation
   checkPageBreak(60);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42);
   doc.text(
-    `2. CLINICAL INTERACTION EVALUATION (${results.length} PAIR${results.length === 1 ? '' : 'S'} EVALUATED)`,
+    `${sectionNum}. PAIRWISE CLINICAL INTERACTION EVALUATION (${results.length} PAIR${results.length === 1 ? '' : 'S'})`,
     marginX,
     y
   );
@@ -147,12 +287,12 @@ export function generateClinicalSummaryPdf({
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
-    doc.text('No pairwise interactions recorded in current dataset.', marginX + 14, y + 18);
+    doc.text('No pairwise interactions recorded for this regimen.', marginX + 14, y + 18);
     y += 40;
   } else {
     results.forEach((item, index) => {
       const cleanSignificance = cleanPdfText(
-        item.clinicalSignificance || 'No documented interaction in current dataset release.'
+        item.clinicalSignificance || 'No documented interaction record.'
       );
       const cleanManagement = item.management ? cleanPdfText(item.management) : '';
 
@@ -174,31 +314,28 @@ export function generateClinicalSummaryPdf({
 
       checkPageBreak(cardHeight + 8);
 
-      // Card background & border
       const isMajor = item.severity === 'major';
       const isModerate = item.severity === 'moderate';
 
       if (isMajor) {
-        doc.setFillColor(254, 242, 242); // red-50
-        doc.setDrawColor(248, 113, 113); // red-400
+        doc.setFillColor(254, 242, 242);
+        doc.setDrawColor(248, 113, 113);
       } else if (isModerate) {
-        doc.setFillColor(255, 251, 235); // amber-50
-        doc.setDrawColor(251, 191, 36); // amber-400
+        doc.setFillColor(255, 251, 235);
+        doc.setDrawColor(251, 191, 36);
       } else {
-        doc.setFillColor(248, 250, 252); // slate-50
-        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
       }
       doc.setLineWidth(1);
       doc.roundedRect(marginX, y, contentWidth, cardHeight, 4, 4, 'FD');
 
-      // Title & Severity Badge
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(15, 23, 42);
       const cleanPairTitle = `${index + 1}.  ${cleanPdfText(item.drug1)} + ${cleanPdfText(item.drug2)}`;
       doc.text(cleanPairTitle, marginX + 14, y + 17);
 
-      // Badge label: precisely measure with 7.5pt bold to ensure horizontal & vertical centering
       const badgeText = isMajor
         ? 'MAJOR RISK'
         : isModerate
@@ -224,10 +361,8 @@ export function generateClinicalSummaryPdf({
         doc.setTextColor(255, 255, 255);
       }
       doc.roundedRect(badgeX, y + 7, badgeWidth, 15, 3, 3, 'F');
-      // Horizontally and vertically centered inside the pill
       doc.text(badgeText, badgeX + badgeWidth / 2, y + 17.5, { align: 'center' });
 
-      // Significance Text lines (Left-aligned, standard kerning)
       let textY = y + 32;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
@@ -235,12 +370,11 @@ export function generateClinicalSummaryPdf({
       doc.text(sigLines, marginX + 14, textY);
       textY += sigLines.length * 13;
 
-      // Management Text lines (Left-aligned, clean ASCII characters without UTF-16 spacing distortion)
       if (mgmtLines.length > 0) {
         textY += 4;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
-        doc.setTextColor(180, 83, 9); // amber-700
+        doc.setTextColor(180, 83, 9);
         doc.text(mgmtLines, marginX + 14, textY);
       }
 
@@ -249,14 +383,14 @@ export function generateClinicalSummaryPdf({
   }
 
   y += 10;
+  sectionNum++;
 
-  // SECTION 3: Adverse Signs & Symptoms
-  // Section title sits close to the symptom cards
+  // SECTION: Adverse Signs & Symptoms
   checkPageBreak(50);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('3. PATIENT-REPORTED ADVERSE SIGNS & SYMPTOMS', marginX, y);
+  doc.text(`${sectionNum}. PATIENT-REPORTED ADVERSE SIGNS & SYMPTOMS`, marginX, y);
   y += 6;
 
   if (selectedSymptoms.length === 0) {
@@ -304,14 +438,14 @@ export function generateClinicalSummaryPdf({
   }
 
   y += 10;
+  sectionNum++;
 
-  // SECTION 4: Discussion Checklist for Physician
-  // Section title sits close to the checklist card
+  // SECTION: Discussion Checklist for Physician
   checkPageBreak(85);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('4. SUGGESTED DISCUSSION CHECKLIST FOR YOUR DOCTOR', marginX, y);
+  doc.text(`${sectionNum}. SUGGESTED DISCUSSION CHECKLIST FOR YOUR DOCTOR`, marginX, y);
   y += 6;
 
   const questions = [
@@ -330,7 +464,6 @@ export function generateClinicalSummaryPdf({
 
   let qY = y + 15;
   questions.forEach(q => {
-    // Draw empty checkbox square
     doc.setDrawColor(100, 116, 139);
     doc.setLineWidth(1);
     doc.rect(marginX + 14, qY - 8, 9, 9);
@@ -348,9 +481,9 @@ export function generateClinicalSummaryPdf({
   checkPageBreak(35);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(148, 163, 184); // slate-400
+  doc.setTextColor(148, 163, 184);
   const disclaimer =
-    'Clinical Disclaimer: RxCheck provides interaction records from active medical datasets and does not replace professional clinical judgment. Coverage varies by dataset release. Always consult a qualified physician or licensed pharmacist before altering or initiating medication regimens.';
+    'Clinical Disclaimer: This report aggregates documented medical interaction records and safety warnings for consultation purposes. It does not replace professional clinical judgment. Always consult a qualified physician or licensed pharmacist before altering or initiating medication regimens.';
   const discLines = doc.splitTextToSize(cleanPdfText(disclaimer), contentWidth);
   doc.text(discLines, marginX, y);
 

@@ -16,14 +16,13 @@ async function safeFetch(path: string, options?: RequestInit): Promise<Response>
 }
 
 /**
- * Checks if the local Scrapling scraper backend is running.
+ * Checks if the local scraper backend is running.
  */
-export async function checkScraperHealth(): Promise<{ available: boolean; engine?: string }> {
+export async function checkScraperHealth(): Promise<{ available: boolean }> {
   try {
     const res = await safeFetch('/health', { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
-      const data = await res.json();
-      return { available: true, engine: data.engine };
+      return { available: true };
     }
   } catch {
     // Backend offline
@@ -32,7 +31,7 @@ export async function checkScraperHealth(): Promise<{ available: boolean; engine
 }
 
 /**
- * Searches drugs directly from Drugs.com using the Scrapling scraper backend.
+ * Searches drugs directly from Drugs.com.
  */
 export async function searchDrugsFromDrugsCom(query: string): Promise<RxCheckDrugSearchResult[]> {
   const clean = query.trim();
@@ -45,7 +44,7 @@ export async function searchDrugsFromDrugsCom(query: string): Promise<RxCheckDru
 
     if (res.ok) {
       const data: { results: any[]; count: number } = await res.json();
-      return data.results.map(item => ({
+      return (data.results || []).map(item => ({
         name: item.name,
         generic_name: item.generic_name || null,
         rxcui: null,
@@ -58,68 +57,41 @@ export async function searchDrugsFromDrugsCom(query: string): Promise<RxCheckDru
       }));
     }
   } catch (err) {
-    console.warn('Drugs.com scraper search request failed:', err);
+    console.warn('Drugs.com search request failed:', err);
   }
   return [];
 }
 
 /**
- * Combined search supporting RxCheck, Drugs.com Scraper, or Both.
+ * Primary search: Queries Drugs.com first.
+ * If Drugs.com has results, returns them.
+ * If Drugs.com has no results or is unavailable, seamlessly falls back to RxCheck.
  */
-export async function searchDrugsUnified(
-  query: string,
-  mode: 'all' | 'drugscom' | 'rxcheck' = 'all'
-): Promise<RxCheckDrugSearchResult[]> {
+export async function searchDrugsUnified(query: string): Promise<RxCheckDrugSearchResult[]> {
   const clean = query.trim();
   if (clean.length < 2) return [];
 
-  if (mode === 'rxcheck') {
+  try {
+    const drugsComResults = await searchDrugsFromDrugsCom(clean);
+    if (drugsComResults && drugsComResults.length > 0) {
+      return drugsComResults;
+    }
+  } catch (err) {
+    console.warn('Drugs.com search unavailable, falling back to RxCheck:', err);
+  }
+
+  // Fallback to RxCheck
+  try {
     const rxResults = await searchDrugsFromRxCheck(clean);
-    return rxResults.map(r => ({ ...r, source: 'rxcheck' as const }));
+    return (rxResults || []).map(r => ({ ...r, source: 'rxcheck' as const }));
+  } catch (err) {
+    console.warn('RxCheck search fallback failed:', err);
+    return [];
   }
-
-  if (mode === 'drugscom') {
-    return searchDrugsFromDrugsCom(clean);
-  }
-
-  // mode === 'all': Run both concurrently
-  const [rxcheckResults, scraperResults] = await Promise.allSettled([
-    searchDrugsFromRxCheck(clean),
-    searchDrugsFromDrugsCom(clean),
-  ]);
-
-  const map = new Map<string, RxCheckDrugSearchResult>();
-
-  // Add scraper results first
-  if (scraperResults.status === 'fulfilled') {
-    for (const item of scraperResults.value) {
-      const key = item.name.toLowerCase().trim();
-      map.set(key, item);
-    }
-  }
-
-  // Add/merge RxCheck results
-  if (rxcheckResults.status === 'fulfilled') {
-    for (const item of rxcheckResults.value) {
-      const key = item.name.toLowerCase().trim();
-      if (map.has(key)) {
-        // Tag as both
-        const existing = map.get(key)!;
-        existing.source = 'both';
-        if (!existing.generic_name && item.generic_name) {
-          existing.generic_name = item.generic_name;
-        }
-      } else {
-        map.set(key, { ...item, source: 'rxcheck' as const });
-      }
-    }
-  }
-
-  return Array.from(map.values());
 }
 
 /**
- * Fetches the full scraped Drugs.com interaction report.
+ * Fetches the comprehensive Drugs.com interaction report.
  */
 export async function fetchDrugsComInteractions(drugs: string[]): Promise<ScrapedInteractionReport | null> {
   if (drugs.length < 2) return null;
@@ -136,7 +108,7 @@ export async function fetchDrugsComInteractions(drugs: string[]): Promise<Scrape
       return (await res.json()) as ScrapedInteractionReport;
     }
   } catch (err) {
-    console.warn('Failed to fetch Drugs.com scraped interactions:', err);
+    console.warn('Failed to fetch Drugs.com interactions:', err);
   }
   return null;
 }

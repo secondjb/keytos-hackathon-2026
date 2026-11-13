@@ -20,23 +20,29 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
-import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import type { ScrapedInteractionReport } from '../types/rxcheck';
 
 interface DrugsComReportCardProps {
-  report: ScrapedInteractionReport;
+  report?: ScrapedInteractionReport | null;
 }
 
 export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }) => {
   const theme = useTheme();
   const [expandedSection, setExpandedSection] = useState<string | false>('drug-interactions');
 
+  if (!report || typeof report !== 'object') {
+    return null;
+  }
+
+  const drugInteractions = Array.isArray(report.drug_interactions) ? report.drug_interactions : [];
+  const duplications = Array.isArray(report.duplications) ? report.duplications : [];
+  const foodInteractions = Array.isArray(report.food_interactions) ? report.food_interactions : [];
+
   const totalInteractions =
-    report.drug_interactions.length +
-    report.duplications.length +
-    report.food_interactions.length +
-    report.disease_interactions.length;
+    drugInteractions.length +
+    duplications.length +
+    foodInteractions.length;
 
   const handleAccordionChange = (panel: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
     setExpandedSection(isExpanded ? panel : false);
@@ -82,11 +88,11 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                  Drugs.com Scraped Clinical Report
+                  Drugs.com Clinical Report
                 </Typography>
                 <Chip
                   size="small"
-                  label="Scrapling Live Engine"
+                  label="Verified Scraping"
                   sx={{
                     bgcolor: 'rgba(16, 185, 129, 0.15)',
                     color: '#10b981',
@@ -97,7 +103,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
                 />
               </Box>
               <Typography variant="caption" color="text.secondary">
-                Directly scraped from Drugs.com via headless browser bypass
+                Aggregated reports from Drugs.com dataset
               </Typography>
             </Box>
           </Box>
@@ -124,7 +130,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
         ) : (
           <Stack spacing={1.5}>
             {/* 1. Drug-Drug Interactions */}
-            {report.drug_interactions.length > 0 && (
+            {drugInteractions.length > 0 && (
               <Accordion
                 expanded={expandedSection === 'drug-interactions'}
                 onChange={handleAccordionChange('drug-interactions')}
@@ -140,13 +146,13 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
                     <WarningAmberIcon color="error" fontSize="small" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      Drug-to-Drug Interactions ({report.drug_interactions.length})
+                      Drug-to-Drug Interactions ({drugInteractions.length})
                     </Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 0 }}>
                   <Stack spacing={1.5}>
-                    {report.drug_interactions.map((item, idx) => (
+                    {drugInteractions.map((item, idx) => (
                       <Box
                         key={idx}
                         sx={{
@@ -173,7 +179,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
             )}
 
             {/* 2. Therapeutic Duplication */}
-            {report.duplications.length > 0 && (
+            {duplications.length > 0 && (
               <Accordion
                 expanded={expandedSection === 'duplications'}
                 onChange={handleAccordionChange('duplications')}
@@ -189,13 +195,13 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
                     <ContentCopyIcon color="warning" fontSize="small" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      Therapeutic Duplication Warnings ({report.duplications.length})
+                      Therapeutic Duplication Warnings ({duplications.length})
                     </Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 0 }}>
                   <Stack spacing={1.5}>
-                    {report.duplications.map((item, idx) => (
+                    {duplications.map((item, idx) => (
                       <Box
                         key={idx}
                         sx={{
@@ -219,7 +225,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
             )}
 
             {/* 3. Food & Lifestyle Warnings */}
-            {report.food_interactions.length > 0 && (
+            {foodInteractions.length > 0 && (
               <Accordion
                 expanded={expandedSection === 'food'}
                 onChange={handleAccordionChange('food')}
@@ -235,13 +241,13 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
                     <RestaurantIcon color="primary" fontSize="small" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      Food, Alcohol & Lifestyle Interactions ({report.food_interactions.length})
+                      Food, Alcohol & Lifestyle Interactions ({foodInteractions.length})
                     </Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 0 }}>
                   <Stack spacing={1.5}>
-                    {report.food_interactions.map((item, idx) => (
+                    {foodInteractions.map((item, idx) => (
                       <Box
                         key={idx}
                         sx={{
@@ -259,57 +265,6 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
                         </Typography>
                       </Box>
                     ))}
-                  </Stack>
-                </AccordionDetails>
-              </Accordion>
-            )}
-
-            {/* 4. Disease / Condition Warnings */}
-            {report.disease_interactions.length > 0 && (
-              <Accordion
-                expanded={expandedSection === 'diseases'}
-                onChange={handleAccordionChange('diseases')}
-                elevation={0}
-                sx={{
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: '12px !important',
-                  '&:before': { display: 'none' },
-                  overflow: 'hidden',
-                }}
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-                    <LocalHospitalIcon color="secondary" fontSize="small" />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      Disease & Pre-existing Condition Interactions ({report.disease_interactions.length})
-                    </Typography>
-                  </Box>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
-                  <Stack spacing={1.5}>
-                    {report.disease_interactions.slice(0, 10).map((item, idx) => (
-                      <Box
-                        key={idx}
-                        sx={{
-                          p: 1.5,
-                          borderRadius: 2,
-                          bgcolor: 'background.paper',
-                          border: `1px solid ${theme.palette.divider}`,
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 800, mb: 0.5 }}>
-                          {item.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                          {item.text}
-                        </Typography>
-                      </Box>
-                    ))}
-                    {report.disease_interactions.length > 10 && (
-                      <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', display: 'block', pt: 1 }}>
-                        + {report.disease_interactions.length - 10} more condition interactions listed on Drugs.com
-                      </Typography>
-                    )}
                   </Stack>
                 </AccordionDetails>
               </Accordion>

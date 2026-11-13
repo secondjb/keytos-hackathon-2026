@@ -39,12 +39,10 @@ export const App: React.FC = () => {
     return (saved as ThemeMode) || (prefersDarkMode ? 'dark' : 'light');
   });
 
-  // Regimen list starts empty
   const [drugs, setDrugs] = useState<string[]>([]);
   const [selectedSymptomIds, setSelectedSymptomIds] = useState<string[]>([]);
   const [results, setResults] = useState<EvaluatedDrugPair[]>([]);
   const [scrapedReport, setScrapedReport] = useState<ScrapedInteractionReport | null>(null);
-  const [includeDrugsComScrape, setIncludeDrugsComScrape] = useState<boolean>(true);
   const [hasEvaluated, setHasEvaluated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
@@ -62,26 +60,26 @@ export const App: React.FC = () => {
     fetchAuthoritativeUsage();
   }, []);
 
-  // Run Polypharmacy & Drugs.com Evaluation
+  // Run Comprehensive Evaluation: Drugs.com Report + Pairwise Clinical Records
   const handleEvaluate = async (drugList = drugs) => {
     if (drugList.length < 2) return;
     setIsLoading(true);
     setProgress({ completed: 0, total: (drugList.length * (drugList.length - 1)) / 2 });
 
     try {
-      // Evaluate RxCheck pairs & Drugs.com scraper concurrently
       const rxCheckPromise = checkPolypharmacyInteractions(drugList, (completed, total) => {
         setProgress({ completed, total });
       });
 
-      const scraperPromise = includeDrugsComScrape
-        ? fetchDrugsComInteractions(drugList)
-        : Promise.resolve(null);
+      const drugsComPromise = fetchDrugsComInteractions(drugList).catch(err => {
+        console.warn('Drugs.com fetch warning:', err);
+        return null;
+      });
 
-      const [rxResponse, scrapedResponse] = await Promise.all([rxCheckPromise, scraperPromise]);
+      const [rxResponse, drugsComResponse] = await Promise.all([rxCheckPromise, drugsComPromise]);
 
       setResults(rxResponse.results);
-      setScrapedReport(scrapedResponse);
+      setScrapedReport(drugsComResponse);
       setHasEvaluated(true);
       fetchAuthoritativeUsage();
     } catch (err) {
@@ -92,10 +90,10 @@ export const App: React.FC = () => {
     }
   };
 
-  // Dynamically extract clinical symptoms directly from RxCheck records
+  // Dynamically extract clinical symptoms directly from records
   const dynamicSymptoms = extractSymptomsFromRecords(results);
 
-  // If a drug is deleted or cleared, reset right column
+  // If a drug is deleted or cleared, reset results
   const handleDrugsChange = (newDrugs: string[]) => {
     if (newDrugs.length < drugs.length || newDrugs.length < 2) {
       setHasEvaluated(false);
@@ -118,7 +116,6 @@ export const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-        {/* Top Bar with 'RxCheck' bold + 'Clinical Interaction Engine' regular */}
         <Navbar themeMode={themeMode} onToggleTheme={toggleTheme} />
 
         {/* Main 2-Column Application Layout */}
@@ -132,8 +129,6 @@ export const App: React.FC = () => {
                   onChangeDrugs={handleDrugsChange}
                   onEvaluate={() => handleEvaluate(drugs)}
                   isLoading={isLoading}
-                  includeDrugsComScrape={includeDrugsComScrape}
-                  onToggleDrugsComScrape={setIncludeDrugsComScrape}
                 />
               </Box>
             </Grid>
@@ -154,10 +149,10 @@ export const App: React.FC = () => {
                 >
                   <CircularProgress size={44} sx={{ color: 'primary.main', mb: 2.5 }} />
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                    Querying RxCheck & Drugs.com Scraper...
+                    Analyzing Medication Regimen...
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 460, mx: 'auto' }}>
-                    Evaluating pairwise interactions across the clinical datasets and scraping live Drugs.com reports.
+                    Reviewing clinical interactions, safety warnings, and drug guidance.
                     {progress && (
                       <Box component="span" sx={{ display: 'block', mt: 1, fontWeight: 700, color: 'primary.main' }}>
                         Evaluated {progress.completed} of {progress.total} pairs
@@ -167,7 +162,7 @@ export const App: React.FC = () => {
                 </Box>
               )}
 
-              {/* State B: Initial Onboarding Tutorial & Disclaimers */}
+              {/* State B: Initial Onboarding Tutorial */}
               {!hasEvaluated && !isLoading && (
                 <TutorialCard
                   onLoadExample={exampleDrugs => {
@@ -186,17 +181,17 @@ export const App: React.FC = () => {
                     onOpenReport={() => setDoctorModalOpen(true)}
                   />
 
-                  {/* 2. Drugs.com Scraped Report (if enabled & available) */}
+                  {/* 2. Drugs.com Clinical Report */}
                   {scrapedReport && <DrugsComReportCard report={scrapedReport} />}
 
-                  {/* 3. Dynamic Symptoms Extracted from RxCheck Records */}
+                  {/* 3. Adverse Signs & Symptoms */}
                   <SymptomSelector
                     symptoms={dynamicSymptoms}
                     selectedSymptomIds={selectedSymptomIds}
                     onToggleSymptom={handleToggleSymptom}
                   />
 
-                  {/* 4. Lifestyle & Recreational Substance Advisory */}
+                  {/* 4. Lifestyle & Recreational Advisory */}
                   <RecreationalAdvisory results={results} drugs={drugs} />
 
                   {/* 5. Evaluated Pairs List */}
@@ -207,7 +202,7 @@ export const App: React.FC = () => {
                           Evaluated Pairs ({results.length})
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Pairwise records from the active RxCheck medical dataset.
+                          Pairwise clinical interaction records and mechanisms.
                         </Typography>
                       </Box>
 
@@ -230,7 +225,7 @@ export const App: React.FC = () => {
                     }}
                   >
                     <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, color: 'text.secondary', lineHeight: 1.6 }}>
-                      <strong>Clinical Disclaimer:</strong> Data is aggregated from active medical datasets and Drugs.com live reports, and does not replace professional clinical judgment. Always consult a qualified physician or licensed pharmacist before altering any medication regimen.
+                      <strong>Clinical Disclaimer:</strong> Data is compiled for informational and consultation review, and does not replace professional clinical judgment. Always consult a qualified physician or licensed pharmacist before altering any medication regimen.
                     </Typography>
                   </Alert>
                 </Stack>
@@ -246,6 +241,7 @@ export const App: React.FC = () => {
           drugs={drugs}
           results={results}
           selectedSymptoms={dynamicSymptoms.filter(s => selectedSymptomIds.includes(s.id))}
+          drugsComReport={scrapedReport}
         />
       </Box>
     </ThemeProvider>

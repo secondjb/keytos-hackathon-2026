@@ -111,6 +111,8 @@ export async function searchDrugsFromRxCheck(query: string): Promise<RxCheckDrug
   return finalResults;
 }
 
+let cachedUsageInfo: RxCheckUsageInfo | null = null;
+
 /**
  * Get authoritative API usage, limits, and tier features from /v1/auth/usage
  */
@@ -129,6 +131,7 @@ export async function fetchAuthoritativeUsage(): Promise<RxCheckUsageInfo | null
     if (!res.ok) return null;
     const data: RxCheckUsageInfo = await res.json();
 
+    cachedUsageInfo = data;
     apiKeysManager.updateActiveKeyUsage(data.queries_used, data.queries_remaining);
     return data;
   } catch (err) {
@@ -283,7 +286,7 @@ export async function checkPolypharmacyInteractions(
   drugs: string[],
   onProgress?: (completed: number, total: number) => void
 ): Promise<RxCheckPolypharmacyResponse> {
-  const cleanDrugs = Array.from(new Set(drugs.map(d => d.trim()))).filter(Boolean);
+  const cleanDrugs = Array.from(new Set(drugs.map(d => sanitizeDrugInput(d)))).filter(Boolean);
   if (cleanDrugs.length < 2) {
     return {
       results: [],
@@ -301,54 +304,56 @@ export async function checkPolypharmacyInteractions(
 
   const apiKey = apiKeysManager.getActiveKey();
 
-  // Try official Polypharmacy endpoint: GET /v1/interactions/polypharmacy?drugs=...
-  try {
-    const polyUrl = `${BASE_URL}/interactions/polypharmacy?drugs=${encodeURIComponent(cleanDrugs.join(','))}`;
-    const polyRes = await fetch(polyUrl, {
-      headers: {
-        'X-API-Key': apiKey,
-        'Accept': 'application/json',
-      },
-    });
+  // Try official Polypharmacy endpoint ONLY if tier features allow it (Growth tier or above)
+  if (cachedUsageInfo?.features?.polypharmacy) {
+    try {
+      const polyUrl = `${BASE_URL}/interactions/polypharmacy?drugs=${encodeURIComponent(cleanDrugs.join(','))}`;
+      const polyRes = await fetch(polyUrl, {
+        headers: {
+          'X-API-Key': apiKey,
+          'Accept': 'application/json',
+        },
+      });
 
-    if (polyRes.ok) {
-      const polyData = await polyRes.json();
-      const results: EvaluatedDrugPair[] = (polyData.results || []).map((item: any, idx: number) => ({
-        id: `${item.query?.drug1?.input || idx}::${item.query?.drug2?.input || idx}`,
-        drug1: item.query?.drug1?.input || '',
-        drug2: item.query?.drug2?.input || '',
-        status: item.result_status,
-        severity: item.interaction?.severity || (item.result_status === 'interaction_found' ? 'moderate' : 'none'),
-        severityScore: item.interaction?.severity_score || 0,
-        isHighPriority: !!item.interaction?.onc_high_priority,
-        resolvedDrug1: item.query?.drug1?.resolved_name || item.query?.drug1?.input || '',
-        resolvedDrug2: item.query?.drug2?.resolved_name || item.query?.drug2?.input || '',
-        mechanism: item.interaction?.mechanism || '',
-        clinicalSignificance: item.interaction?.clinical_significance || '',
-        management: item.interaction?.management || '',
-        evidenceLevel: item.interaction?.evidence_level || 'A',
-        sources: item.interaction?.sources || ['RxCheck Dataset'],
-        disclaimer: item.disclaimer || 'RxCheck Clinical Record',
-        timestamp: Date.now(),
-      }));
+      if (polyRes.ok) {
+        const polyData = await polyRes.json();
+        const results: EvaluatedDrugPair[] = (polyData.results || []).map((item: any, idx: number) => ({
+          id: `${item.query?.drug1?.input || idx}::${item.query?.drug2?.input || idx}`,
+          drug1: item.query?.drug1?.input || '',
+          drug2: item.query?.drug2?.input || '',
+          status: item.result_status,
+          severity: item.interaction?.severity || (item.result_status === 'interaction_found' ? 'moderate' : 'none'),
+          severityScore: item.interaction?.severity_score || 0,
+          isHighPriority: !!item.interaction?.onc_high_priority,
+          resolvedDrug1: item.query?.drug1?.resolved_name || item.query?.drug1?.input || '',
+          resolvedDrug2: item.query?.drug2?.resolved_name || item.query?.drug2?.input || '',
+          mechanism: item.interaction?.mechanism || '',
+          clinicalSignificance: item.interaction?.clinical_significance || '',
+          management: item.interaction?.management || '',
+          evidenceLevel: item.interaction?.evidence_level || 'A',
+          sources: item.interaction?.sources || ['RxCheck Dataset'],
+          disclaimer: item.disclaimer || 'RxCheck Clinical Record',
+          timestamp: Date.now(),
+        }));
 
-      const summary: RxCheckPolypharmacySummary = {
-        total_pairs: polyData.summary?.total_pairs || results.length,
-        interactions_found: results.filter(r => r.status === 'interaction_found').length,
-        no_record_count: results.filter(r => r.status === 'no_record_found').length,
-        max_severity: results.some(r => r.severity === 'major') ? 'major' : results.some(r => r.severity === 'moderate') ? 'moderate' : 'none',
-        onc_high_priority_count: results.filter(r => r.isHighPriority).length,
-      };
+        const summary: RxCheckPolypharmacySummary = {
+          total_pairs: polyData.summary?.total_pairs || results.length,
+          interactions_found: results.filter(r => r.status === 'interaction_found').length,
+          no_record_count: results.filter(r => r.status === 'no_record_found').length,
+          max_severity: results.some(r => r.severity === 'major') ? 'major' : results.some(r => r.severity === 'moderate') ? 'moderate' : 'none',
+          onc_high_priority_count: results.filter(r => r.isHighPriority).length,
+        };
 
-      return {
-        results,
-        summary,
-        tier_mode: 'native_growth_api',
-        server_endpoint_used: '/v1/interactions/polypharmacy',
-      };
+        return {
+          results,
+          summary,
+          tier_mode: 'native_growth_api',
+          server_endpoint_used: '/v1/interactions/polypharmacy',
+        };
+      }
+    } catch {
+      // Continue to coordinated N-choose-2
     }
-  } catch {
-    // Continue to coordinated N-choose-2
   }
 
   // Coordinated N-choose-2 pairs
