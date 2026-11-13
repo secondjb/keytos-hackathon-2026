@@ -71,12 +71,11 @@ export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
           filled: {
             '&.MuiChip-colorError': {
               color: isDark ? offWhite : '#ffffff',
-              textShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.8), 0 0 1px rgba(0, 0, 0, 0.6)' : 'none',
             },
           },
           outlined: {
             '&.MuiChip-colorError': {
-              color: isDark ? '#E54D58' : '#b91c1c',
+              color: isDark ? '#B30000' : '#b91c1c',
             },
           },
         },
@@ -109,9 +108,9 @@ export const dark_steel: Theme = createTheme({
       contrastText: '#161618',
     },
     error: {
-      main: '#E54D58', // Vivid, clean clinical red that pops sharply on neutral charcoal gray
-      light: '#ff858f',
-      dark: '#b32632',
+      main: '#B30000',
+      light: '#e03a3a',
+      dark: '#800000',
       contrastText: offWhite, // '#fafafa' offwhite inside dark mode chips & alerts
     },
     warning: {
