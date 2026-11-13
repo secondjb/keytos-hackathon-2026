@@ -69,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, md: 3 } }}>
-          {/* Logo & Title: Only 'RxCheck' is bold, rest is regular weight */}
+          {/* Logo & Title: Exactly identical font family and size */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box
               sx={{
@@ -85,11 +85,18 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
             >
               <HealthAndSafetyIcon fontSize="small" />
             </Box>
-            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.2rem' }, letterSpacing: '-0.2px' }}>
-              <Box component="span" sx={{ fontWeight: 800 }}>RxCheck</Box>
-              <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary', ml: 0.8 }}>
-                Clinical Interaction Engine
-              </Box>
+
+            <Typography
+              sx={{
+                fontFamily: theme.typography.fontFamily,
+                fontSize: { xs: '1.05rem', sm: '1.2rem' },
+                letterSpacing: '-0.2px',
+                color: 'text.primary',
+                lineHeight: 1,
+              }}
+            >
+              <strong style={{ fontWeight: 800 }}>RxCheck</strong>{' '}
+              <span style={{ fontWeight: 400 }}>Clinical Interaction Engine</span>
             </Typography>
           </Box>
 

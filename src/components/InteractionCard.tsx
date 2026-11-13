@@ -133,11 +133,6 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
                 {item.drug2}
               </Typography>
             </Box>
-            {(item.resolvedDrug1 !== item.drug1 || item.resolvedDrug2 !== item.drug2) && (
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-                Resolved dataset concepts: {item.resolvedDrug1} &bull; {item.resolvedDrug2}
-              </Typography>
-            )}
           </Box>
 
           {/* Final 2 chips: same height and size, cached badge removed */}

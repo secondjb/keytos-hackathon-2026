@@ -22,7 +22,7 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Dangerous Interaction Card: Same red outline as the other card, not red fill */}
+      {/* Dangerous Interaction Card: Same red outline, bigger title */}
       {hasMajor && (
         <Card
           elevation={0}
@@ -33,22 +33,31 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
             borderRadius: 2.5,
           }}
         >
-          <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
-            {/* Top Row: Title + Horizontal Doctor Summary Chip */}
+          <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+            {/* Top Row: Bigger Title + Horizontal Doctor Summary Chip */}
             <Box
               sx={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 flexWrap: 'wrap',
-                gap: 1,
-                mb: 1,
+                gap: 1.5,
+                mb: 1.5,
                 width: '100%',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <WarningAmberIcon color="error" fontSize="medium" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'error.main', fontSize: '0.95rem', letterSpacing: '-0.2px' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                <WarningAmberIcon color="error" sx={{ fontSize: 32 }} />
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 800,
+                    color: 'error.main',
+                    fontSize: { xs: '1.05rem', sm: '1.25rem' },
+                    letterSpacing: '-0.3px',
+                    lineHeight: 1.2,
+                  }}
+                >
                   DANGEROUS INTERACTIONS DETECTED — CONSULT YOUR DOCTOR
                 </Typography>
               </Box>
@@ -63,8 +72,8 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
                 color="error"
                 sx={{
                   fontWeight: 700,
-                  fontSize: '0.75rem',
-                  height: 26,
+                  fontSize: '0.78rem',
+                  height: 28,
                   '&:hover': {
                     bgcolor: 'action.hover',
                   },
@@ -72,7 +81,7 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
               />
             </Box>
 
-            <Typography variant="body2" color="text.primary" sx={{ fontSize: '0.88rem', lineHeight: 1.6, pl: 0.5 }}>
+            <Typography variant="body2" color="text.primary" sx={{ fontSize: '0.92rem', lineHeight: 1.6, pl: { sm: 5 } }}>
               One or more high-risk clinical interactions were detected in your regimen that could cause severe adverse events (e.g., hemorrhaging, arrhythmia, or organ toxicity).
               <strong> Never discontinue or alter prescription medications without professional clinical supervision. </strong>
               Contact your doctor or pharmacist right away.
@@ -95,11 +104,11 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
           <CardContent sx={{ p: { xs: 2, md: 2.2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
               <HealthAndSafetyIcon color="warning" fontSize="medium" />
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
                 Unverified Combination (No Record Found) — Consult Your Doctor
               </Typography>
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.84rem', lineHeight: 1.5, pl: 0.5 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', lineHeight: 1.5, pl: { sm: 4.2 } }}>
               No matching record exists in the active RxCheck dataset for one or more pairs.
               <strong> The absence of an interaction record does NOT establish clinical safety. </strong>
               Always verify safety with your healthcare provider.
