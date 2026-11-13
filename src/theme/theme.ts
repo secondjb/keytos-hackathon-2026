@@ -36,7 +36,7 @@ export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
           root: {
             backgroundImage: 'none',
             borderRadius: 12,
-            border: isDark ? '1px solid rgba(237, 207, 181, 0.15)' : '1px solid rgba(0, 0, 0, 0.08)',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.09)' : '1px solid rgba(0, 0, 0, 0.08)',
             boxShadow: 'none', // Remove all glows
           },
         },
@@ -73,36 +73,36 @@ export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
   };
 };
 
-export const dark_almond: Theme = createTheme({
+export const dark_steel: Theme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#EDCFB5',
-      light: '#f5e4d4',
-      dark: '#c9a98d',
-      contrastText: '#2B170E',
+      main: '#928DAB',
+      light: '#b2aecd',
+      dark: '#6f6a87',
+      contrastText: '#161618',
     },
     secondary: {
-      main: '#d4a373',
-      light: '#faedcd',
-      dark: '#bc6c25',
-      contrastText: '#2B170E',
+      main: '#9FA8DA',
+      light: '#C5CAE9',
+      dark: '#5C6BC0',
+      contrastText: '#161618',
     },
     error: {
-      main: '#b91c1c',
-      light: '#fca5a5',
-      dark: '#991b1b',
+      main: '#E54D58', // Vivid, clean clinical red that pops sharply on neutral charcoal gray
+      light: '#ff858f',
+      dark: '#b32632',
       contrastText: '#ffffff',
     },
     warning: {
-      main: '#fbbf24',
+      main: '#f59e0b',
       light: '#fde68a',
       dark: '#b45309',
     },
     info: {
-      main: '#EDCFB5',
-      light: '#f5e4d4',
-      dark: '#c9a98d',
+      main: '#928DAB',
+      light: '#b2aecd',
+      dark: '#6f6a87',
     },
     success: {
       main: '#34d399',
@@ -110,17 +110,20 @@ export const dark_almond: Theme = createTheme({
       dark: '#047857',
     },
     background: {
-      default: '#2B170E',
-      paper: '#52392e',
+      default: '#161618', // Clean neutral charcoal steel gray (no purple)
+      paper: '#1F1F22',   // Elevated dark surface
     },
     text: {
       primary: offWhite,
       secondary: offWhite,
     },
-    divider: 'rgba(237, 207, 181, 0.15)',
+    divider: 'rgba(255, 255, 255, 0.09)',
   },
   ...getBaseOptions('dark'),
 });
+
+// Alias for backwards compatibility if needed
+export const dark_almond = dark_steel;
 
 export const lightTheme: Theme = createTheme({
   palette: {
@@ -172,5 +175,5 @@ export const lightTheme: Theme = createTheme({
 });
 
 export const createAppTheme = (mode: ThemeMode): Theme => {
-  return responsiveFontSizes(mode === 'dark' ? dark_almond : lightTheme);
+  return responsiveFontSizes(mode === 'dark' ? dark_steel : lightTheme);
 };

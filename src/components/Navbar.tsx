@@ -27,7 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
       position="sticky"
       elevation={0}
       sx={{
-        bgcolor: isDark ? '#3C2216' : '#ffffff',
+        bgcolor: isDark ? '#242428' : '#ffffff',
         borderBottom: `1px solid ${theme.palette.divider}`,
         color: theme.palette.text.primary,
         boxShadow: 'none',

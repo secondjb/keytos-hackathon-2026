@@ -33,15 +33,15 @@ interface DrugsComReportCardProps {
 
 export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, isLoading }) => {
   const theme = useTheme();
-  const [isCardOpen, setIsCardOpen] = useState(false);
-  const [expandedSection, setExpandedSection] = useState<string | false>(false);
+  const [isCardOpen, setIsCardOpen] = useState(true);
+  const [expandedSection, setExpandedSection] = useState<string | false>('drug-interactions');
 
   if (isLoading) {
     return (
       <Card
         elevation={0}
         sx={{
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(237, 207, 181, 0.25)' : 'rgba(14, 165, 233, 0.4)'}`,
+          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(14, 165, 233, 0.4)'}`,
           borderRadius: 2.5,
           bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'rgba(240, 249, 255, 0.6)',
         }}
@@ -93,7 +93,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
     <Card
       elevation={0}
       sx={{
-        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(237, 207, 181, 0.25)' : 'rgba(14, 165, 233, 0.4)'}`,
+        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(14, 165, 233, 0.4)'}`,
         borderRadius: 2.5,
         bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'rgba(240, 249, 255, 0.6)',
       }}
@@ -120,7 +120,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
               sx={{
                 p: 1,
                 borderRadius: 2,
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(237, 207, 181, 0.15)' : 'rgba(14, 165, 233, 0.15)',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(14, 165, 233, 0.15)',
                 color: theme.palette.mode === 'dark' ? 'primary.main' : '#0284c7',
                 display: 'flex',
               }}

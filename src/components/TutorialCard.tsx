@@ -40,7 +40,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
             sx={{
               p: 1.2,
               borderRadius: 2,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(237, 207, 181, 0.15)' : 'rgba(2, 132, 199, 0.1)',
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(2, 132, 199, 0.1)',
               color: 'primary.main',
               display: 'flex',
             }}
