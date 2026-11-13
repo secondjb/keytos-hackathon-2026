@@ -21,7 +21,7 @@ import CoffeeIcon from '@mui/icons-material/Coffee';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
 import ShieldIcon from '@mui/icons-material/Shield';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ScienceIcon from '@mui/icons-material/Science';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
@@ -101,7 +101,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
             size="small"
             label="LIKELY SAFE"
             color="success"
-            icon={<CheckCircleOutlineIcon fontSize="small" />}
+            icon={<CheckCircleOutlinedIcon fontSize="small" />}
             sx={{ fontWeight: 700, fontSize: '0.72rem' }}
           />
         );

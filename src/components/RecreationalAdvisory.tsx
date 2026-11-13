@@ -39,7 +39,7 @@ const RECREATIONAL_SUBSTANCE_NAMES = [
 export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({
   results,
   drugs,
-  defaultExpanded = true,
+  defaultExpanded = false,
 }) => {
   const theme = useTheme();
   const [isOpen, setIsOpen] = useState(defaultExpanded);

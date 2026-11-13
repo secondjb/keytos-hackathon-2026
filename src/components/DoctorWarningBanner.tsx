@@ -15,7 +15,7 @@ interface DoctorWarningBannerProps {
 export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
   results,
   onOpenReport,
-  defaultExpanded = true,
+  defaultExpanded = false,
 }) => {
   const theme = useTheme();
   const [isOpen, setIsOpen] = useState(defaultExpanded);
