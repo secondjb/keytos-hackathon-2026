@@ -19,6 +19,7 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import type { EvaluatedDrugPair, ExtractedClinicalSymptom, ScrapedInteractionReport } from '../types/rxcheck';
 import { generateClinicalSummaryPdf } from '../utils/generateClinicalPdf';
+import { evaluateLifestyleDietaryRadar } from '../services/lifestyleDietaryService';
 
 interface DoctorReportModalProps {
   open: boolean;
@@ -125,7 +126,23 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
             s => `   • ${s.symptomName}${s.isRedFlag ? ' [CRITICAL/RED FLAG]' : ''} (Related to: ${s.sourcePair})\n     Context: "${s.contextSnippet}"`
           )),
       '',
-      '5. SUGGESTED QUESTIONS FOR PHYSICIAN / PHARMACIST:',
+      (() => {
+        const dietaryRadar = evaluateLifestyleDietaryRadar(drugs, drugsComReport || null, results);
+        return [
+          '5. LIFESTYLE & DIETARY RISK RADAR ("Can I have a drink, coffee, grapefruit, or dairy?"):',
+          `   • Alcohol / Ethanol: [${dietaryRadar.alcohol.riskLevel.toUpperCase()}] ${dietaryRadar.alcohol.verdict}`,
+          `     Risk Summary: ${dietaryRadar.alcohol.riskSummary}`,
+          `   • Caffeine & Stimulants: [${dietaryRadar.caffeine.riskLevel.toUpperCase()}] ${dietaryRadar.caffeine.verdict}`,
+          `     Risk Summary: ${dietaryRadar.caffeine.riskSummary}`,
+          `   • Grapefruit & Citrus: [${dietaryRadar.grapefruit.riskLevel.toUpperCase()}] ${dietaryRadar.grapefruit.verdict}`,
+          `     Risk Summary: ${dietaryRadar.grapefruit.riskSummary}`,
+          `   • Dairy, Calcium & Antacids: [${dietaryRadar.dairy.riskLevel.toUpperCase()}] ${dietaryRadar.dairy.verdict}`,
+          `     Risk Summary: ${dietaryRadar.dairy.riskSummary}`,
+          '   (Primary Source: Drugs.com Food Section | Secondary Source: openFDA Food Warnings)',
+          '',
+        ].join('\n');
+      })(),
+      '6. SUGGESTED QUESTIONS FOR PHYSICIAN / PHARMACIST:',
       '   [ ] Are these medications safe to take simultaneously for my condition?',
       '   [ ] Should any doses be spaced throughout the day to minimize peak concentrations?',
       '   [ ] Are there safer alternative medications with lower interaction risks?',
@@ -458,6 +475,70 @@ export const DoctorReportModal: React.FC<DoctorReportModalProps> = ({
               </Box>
             )}
           </Box>
+
+          {/* Section: Lifestyle & Dietary Risk Radar */}
+          {(() => {
+            const dietary = evaluateLifestyleDietaryRadar(drugs, drugsComReport || null, results);
+            return (
+              <Box sx={{ mb: 3 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.6,
+                    color: 'primary.main',
+                    display: 'block',
+                    mb: 1,
+                  }}
+                >
+                  Lifestyle & Dietary Risk Radar ("Can I have a drink, coffee, grapefruit, or dairy?"):
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+                  {[dietary.alcohol, dietary.caffeine, dietary.grapefruit, dietary.dairy].map(item => (
+                    <Box
+                      key={item.category}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 1.5,
+                        border: `1px solid ${theme.palette.divider}`,
+                        bgcolor:
+                          item.riskLevel === 'avoid' || item.riskLevel === 'major'
+                            ? 'rgba(239, 68, 68, 0.06)'
+                            : item.riskLevel === 'moderate'
+                            ? 'rgba(245, 158, 11, 0.06)'
+                            : 'action.hover',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800 }}>
+                          {item.title}
+                        </Typography>
+                        <Chip
+                          label={item.riskLevel.toUpperCase()}
+                          size="small"
+                          color={
+                            item.riskLevel === 'avoid' || item.riskLevel === 'major'
+                              ? 'error'
+                              : item.riskLevel === 'moderate'
+                              ? 'warning'
+                              : 'default'
+                          }
+                          sx={{ height: 18, fontSize: '0.65rem', fontWeight: 800 }}
+                        />
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.78rem' }}>
+                        {item.verdict}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3, fontSize: '0.7rem' }}>
+                        {item.riskSummary}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            );
+          })()}
 
           {/* Section 5: Doctor Questions Checklist */}
           <Box>

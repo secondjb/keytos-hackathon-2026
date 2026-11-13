@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import type { EvaluatedDrugPair, ExtractedClinicalSymptom, ScrapedInteractionReport } from '../types/rxcheck';
+import { evaluateLifestyleDietaryRadar } from '../services/lifestyleDietaryService';
 
 export interface GeneratePdfOptions {
   drugs: string[];
@@ -438,6 +439,56 @@ export function generateClinicalSummaryPdf({
   }
 
   y += 10;
+  sectionNum++;
+
+  // SECTION: Lifestyle & Dietary Risk Radar
+  const dietary = evaluateLifestyleDietaryRadar(drugs, drugsComReport || null, results);
+  checkPageBreak(75);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${sectionNum}. LIFESTYLE & DIETARY RISK RADAR ("Can I have a drink, coffee, grapefruit, or dairy?")`, marginX, y);
+  y += 6;
+
+  const radarItems = [
+    { title: 'Alcohol / Ethanol', item: dietary.alcohol },
+    { title: 'Caffeine & Stimulants', item: dietary.caffeine },
+    { title: 'Grapefruit & Citrus', item: dietary.grapefruit },
+    { title: 'Dairy & Calcium Chelation', item: dietary.dairy },
+  ];
+
+  radarItems.forEach(r => {
+    const isAlert = r.item.riskLevel === 'avoid' || r.item.riskLevel === 'major' || r.item.riskLevel === 'moderate';
+    const textLines = doc.splitTextToSize(`${r.item.verdict} - ${r.item.riskSummary}`, contentWidth - 28);
+    const boxHeight = 22 + textLines.length * 11;
+    checkPageBreak(boxHeight + 4);
+
+    if (r.item.riskLevel === 'avoid' || r.item.riskLevel === 'major') {
+      doc.setFillColor(254, 242, 242);
+      doc.setDrawColor(248, 113, 113);
+    } else if (r.item.riskLevel === 'moderate') {
+      doc.setFillColor(255, 251, 235);
+      doc.setDrawColor(245, 158, 11);
+    } else {
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+    }
+    doc.roundedRect(marginX, y, contentWidth, boxHeight, 4, 4, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(isAlert ? 185 : 15, isAlert ? 28 : 23, isAlert ? 28 : 42);
+    doc.text(`[${r.item.riskLevel.toUpperCase()}] ${r.title}: ${r.item.question}`, marginX + 14, y + 13);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(textLines, marginX + 14, y + 24);
+
+    y += boxHeight + 5;
+  });
+
+  y += 8;
   sectionNum++;
 
   // SECTION: Discussion Checklist for Physician
