@@ -6,31 +6,27 @@ import {
   TextField,
   Chip,
   Button,
-  Stack,
   Card,
   CardContent,
   CircularProgress,
+  List,
+  ListItem,
+  IconButton,
+  Divider,
   useTheme,
 } from '@mui/material';
 import MedicationIcon from '@mui/icons-material/Medication';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import SearchIcon from '@mui/icons-material/Search';
-import {
-  searchDrugsFromRxCheck,
-  getStoredDrugCatalog,
-  bootstrapCatalogFromRxCheck,
-} from '../services/rxCheckApi';
+import { searchDrugsFromRxCheck } from '../services/rxCheckApi';
 import type { RxCheckDrugSearchResult } from '../types/rxcheck';
-import { PRESET_SCENARIOS, type PresetScenario } from '../data/presets';
 
 interface DrugInputProps {
   drugs: string[];
   onChangeDrugs: (drugs: string[]) => void;
   onEvaluate: () => void;
   isLoading: boolean;
-  onSelectPreset?: (preset: PresetScenario) => void;
 }
 
 export const DrugInput: React.FC<DrugInputProps> = ({
@@ -38,30 +34,24 @@ export const DrugInput: React.FC<DrugInputProps> = ({
   onChangeDrugs,
   onEvaluate,
   isLoading,
-  onSelectPreset,
 }) => {
   const theme = useTheme();
   const [inputValue, setInputValue] = useState('');
   const [options, setOptions] = useState<RxCheckDrugSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Initialize catalog once from RxCheck dataset
+  // ONLY populate options when user types a query (at least 2 chars), and cache per query
   useEffect(() => {
-    bootstrapCatalogFromRxCheck().then(catalog => {
-      setOptions(catalog);
-    });
-  }, []);
-
-  // Search RxCheck dynamically as user types
-  useEffect(() => {
-    if (inputValue.trim().length < 2) {
-      setOptions(getStoredDrugCatalog());
+    const query = inputValue.trim();
+    if (query.length < 2) {
+      setOptions([]);
+      setIsSearching(false);
       return;
     }
 
     setIsSearching(true);
     const timer = setTimeout(async () => {
-      const results = await searchDrugsFromRxCheck(inputValue);
+      const results = await searchDrugsFromRxCheck(query);
       setOptions(results);
       setIsSearching(false);
     }, 250);
@@ -69,66 +59,73 @@ export const DrugInput: React.FC<DrugInputProps> = ({
     return () => clearTimeout(timer);
   }, [inputValue]);
 
+  const handleAddDrug = (name: string) => {
+    const clean = name.trim();
+    if (!clean) return;
+    if (!drugs.some(d => d.toLowerCase() === clean.toLowerCase())) {
+      onChangeDrugs([...drugs, clean]);
+    }
+    setInputValue('');
+    setOptions([]);
+  };
+
+  const handleRemoveDrug = (indexToRemove: number) => {
+    onChangeDrugs(drugs.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const numPairs = drugs.length >= 2 ? (drugs.length * (drugs.length - 1)) / 2 : 0;
 
   return (
-    <Card elevation={0}>
-      <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <MedicationIcon color="primary" fontSize="large" />
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Medication & Substance Regimen
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Search RxCheck dataset for 2 or more medications, substances, or lifestyle items.
-              </Typography>
-            </Box>
+    <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
+      <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <MedicationIcon color="primary" fontSize="large" />
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+              Medication Search
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Search live RxCheck dataset records
+            </Typography>
           </Box>
-
-          {drugs.length > 0 && (
-            <Button
-              size="small"
-              color="inherit"
-              startIcon={<DeleteOutlinedIcon />}
-              onClick={() => onChangeDrugs([])}
-              sx={{ color: 'text.secondary' }}
-            >
-              Clear All
-            </Button>
-          )}
         </Box>
 
-        {/* Autocomplete Multi-Input drawn from RxCheck */}
+        {/* Autocomplete Input: ONLY populates from user queries */}
         <Autocomplete
-          multiple
           freeSolo
           options={options.map(o => o.name)}
-          value={drugs}
           inputValue={inputValue}
           onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
-          onChange={(_, newValue) => {
-            onChangeDrugs(newValue as string[]);
+          onChange={(_, value) => {
+            if (value && typeof value === 'string') {
+              handleAddDrug(value);
+            }
           }}
           renderInput={params => {
             const { slotProps, ...restParams } = params;
             return (
               <TextField
                 {...restParams}
-                placeholder={drugs.length === 0 ? "Search RxCheck dataset (e.g. Warfarin, Aspirin, Ethanol, Sertraline)..." : "Add another drug from RxCheck dataset..."}
-                helperText={
-                  drugs.length < 2
-                    ? "Select at least 2 drugs to evaluate n-choose-2 pairs via RxCheck Polypharmacy API."
-                    : `Evaluating ${drugs.length} drugs: RxCheck evaluates ${numPairs} n-choose-2 pair${numPairs === 1 ? '' : 's'}.`
-                }
+                placeholder="Type drug name (min 2 characters)..."
+                helperText="Dropdown populates live from RxCheck dataset"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && inputValue.trim()) {
+                    e.preventDefault();
+                    handleAddDrug(inputValue);
+                  }
+                }}
                 slotProps={{
                   ...slotProps,
                   input: {
                     ...slotProps?.input,
                     endAdornment: (
                       <>
-                        {isSearching ? <CircularProgress color="inherit" size={18} sx={{ mr: 1 }} /> : <SearchIcon color="action" sx={{ mr: 1 }} />}
+                        {isSearching ? (
+                          <CircularProgress color="inherit" size={18} sx={{ mr: 1 }} />
+                        ) : (
+                          <SearchIcon color="action" sx={{ mr: 1 }} />
+                        )}
                         {slotProps?.input?.endAdornment}
                       </>
                     ),
@@ -137,23 +134,6 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               />
             );
           }}
-          renderValue={(value, getItemProps) =>
-            value.map((item, index) => {
-              const strName = item as string;
-              const found = options.find(o => o.name.toLowerCase() === strName.toLowerCase());
-              const itemProps = getItemProps({ index });
-              return (
-                <Chip
-                  {...itemProps}
-                  key={strName + index}
-                  label={strName}
-                  color={found?.rxcui ? 'primary' : 'default'}
-                  variant="filled"
-                  sx={{ fontWeight: 600, m: 0.5 }}
-                />
-              );
-            })
-          }
           renderOption={(props, option) => {
             const { key, ...restProps } = props;
             const found = options.find(o => o.name.toLowerCase() === option.toLowerCase());
@@ -185,56 +165,103 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               </Box>
             );
           }}
+          noOptionsText={inputValue.trim().length >= 2 ? (isSearching ? "Searching RxCheck..." : "No matching records in dataset") : "Type at least 2 characters to search"}
         />
 
-        {/* Action Button */}
-        <Box sx={{ mt: 2.5, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        {/* Selected Medication List */}
+        <Box sx={{ mt: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              Regimen List ({drugs.length})
+            </Typography>
+            {drugs.length > 0 && (
+              <Button
+                size="small"
+                color="inherit"
+                startIcon={<DeleteOutlinedIcon />}
+                onClick={() => onChangeDrugs([])}
+                sx={{ color: 'text.secondary', fontSize: '0.75rem', p: 0.5 }}
+              >
+                Clear
+              </Button>
+            )}
+          </Box>
+
+          {drugs.length === 0 ? (
+            <Box
+              sx={{
+                p: 3,
+                textAlign: 'center',
+                borderRadius: 2,
+                border: `1px dashed ${theme.palette.divider}`,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                No medications added yet.
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                Type in the search box above to add 2 or more drugs to evaluate.
+              </Typography>
+            </Box>
+          ) : (
+            <List disablePadding sx={{ maxHeight: 280, overflowY: 'auto' }}>
+              {drugs.map((drugName, idx) => (
+                <ListItem
+                  key={drugName + idx}
+                  disableGutters
+                  sx={{
+                    p: 1.2,
+                    mb: 1,
+                    borderRadius: 1.5,
+                    bgcolor: 'action.hover',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 600, pl: 0.5 }}>
+                    {drugName}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRemoveDrug(idx)}
+                    sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                  >
+                    <DeleteOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </Box>
+
+        <Divider sx={{ my: 2.5 }} />
+
+        {/* Evaluation Action Button */}
+        <Box>
           <Button
             variant="contained"
             color="primary"
+            fullWidth
             size="large"
             disabled={drugs.length < 2 || isLoading}
-            startIcon={<PlayArrowIcon />}
+            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
             onClick={onEvaluate}
-            sx={{ px: 4, py: 1.2, fontWeight: 700 }}
+            sx={{ py: 1.3, fontWeight: 800 }}
           >
-            {isLoading ? 'Running Polypharmacy Check...' : `Evaluate Polypharmacy (${numPairs} pair${numPairs === 1 ? '' : 's'})`}
+            {isLoading
+              ? 'Analyzing Interactions...'
+              : drugs.length < 2
+              ? 'Add at least 2 Drugs'
+              : `Check Interactions (${numPairs} pair${numPairs === 1 ? '' : 's'})`}
           </Button>
-        </Box>
 
-        {/* Preset Scenarios drawn from real RxCheck dataset pairs */}
-        <Box sx={{ mt: 3, pt: 2, borderTop: `1px dashed ${theme.palette.divider}` }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
-            <AutoAwesomeIcon fontSize="small" sx={{ color: 'secondary.main' }} />
-            <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
-              Sample Regimens for RxCheck Evaluation:
+          {drugs.length >= 2 && (
+            <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.secondary', mt: 1 }}>
+              Calculates all {numPairs} N-choose-2 pair combinations
             </Typography>
-          </Box>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-            {PRESET_SCENARIOS.map(preset => (
-              <Chip
-                key={preset.id}
-                label={preset.title}
-                clickable
-                variant="outlined"
-                color="primary"
-                onClick={() => {
-                  onChangeDrugs(preset.drugs);
-                  if (onSelectPreset) onSelectPreset(preset);
-                }}
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '0.8rem',
-                  mb: 1,
-                  transition: 'all 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-                  },
-                }}
-              />
-            ))}
-          </Stack>
+          )}
         </Box>
       </CardContent>
     </Card>

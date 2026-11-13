@@ -11,7 +11,7 @@ import { apiKeysManager } from './apiKeysManager';
 import { getCachedInteraction, setCachedInteraction } from './cacheService';
 
 const BASE_URL = import.meta.env.VITE_RXCHECK_BASE_URL || 'https://api.rxcheck.dev/v1';
-const CATALOG_STORAGE_KEY = 'rxcheck_drug_catalog';
+const SEARCH_CACHE_PREFIX = 'rxcheck_query_cache_';
 
 export const sanitizeDrugInput = (input: string): string => {
   return input
@@ -22,96 +22,45 @@ export const sanitizeDrugInput = (input: string): string => {
 
 /**
  * Live Drug Search directly from RxCheck dataset (/v1/drugs/search?q=...)
+ * Only populates from queries and caches results per query.
  */
 export async function searchDrugsFromRxCheck(query: string): Promise<RxCheckDrugSearchResult[]> {
-  const clean = query.trim();
-  if (clean.length < 2) return getStoredDrugCatalog();
+  const clean = query.trim().toLowerCase();
+  if (clean.length < 2) return [];
+
+  // Check query cache
+  const cacheKey = SEARCH_CACHE_PREFIX + clean;
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as RxCheckDrugSearchResult[];
+    }
+  } catch {
+    // Continue to network
+  }
 
   try {
     const res = await fetch(`${BASE_URL}/drugs/search?q=${encodeURIComponent(clean)}`, {
       signal: AbortSignal.timeout(4000),
     });
 
-    if (!res.ok) {
-      return getStoredDrugCatalog().filter(d =>
-        d.name.toLowerCase().includes(clean.toLowerCase())
-      );
-    }
+    if (!res.ok) return [];
 
     const data: { results: RxCheckDrugSearchResult[]; count: number } = await res.json();
     const fetchedResults = data.results || [];
 
-    // Store new discoveries into local catalog for zero-network repeat access
-    storeDrugsToCatalog(fetchedResults);
+    // Cache this query's results
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(fetchedResults));
+    } catch {
+      // Ignore storage errors
+    }
 
     return fetchedResults;
   } catch (err) {
-    console.warn('RxCheck drug search failed, falling back to local dataset store:', err);
-    return getStoredDrugCatalog().filter(d =>
-      d.name.toLowerCase().includes(clean.toLowerCase())
-    );
+    console.warn('RxCheck drug search failed:', err);
+    return [];
   }
-}
-
-/**
- * Retrieve cached drug concepts pulled from RxCheck
- */
-export function getStoredDrugCatalog(): RxCheckDrugSearchResult[] {
-  try {
-    const stored = localStorage.getItem(CATALOG_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored) as RxCheckDrugSearchResult[];
-    }
-  } catch {
-    // Ignore
-  }
-  return [];
-}
-
-/**
- * Persist newly discovered drugs into local catalog
- */
-function storeDrugsToCatalog(newDrugs: RxCheckDrugSearchResult[]) {
-  try {
-    const existing = getStoredDrugCatalog();
-    const map = new Map<string, RxCheckDrugSearchResult>();
-    existing.forEach(d => map.set(d.name.toLowerCase(), d));
-    newDrugs.forEach(d => {
-      if (d.name) map.set(d.name.toLowerCase(), d);
-    });
-    const merged = Array.from(map.values()).slice(0, 300);
-    localStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(merged));
-  } catch {
-    // Ignore
-  }
-}
-
-/**
- * Bootstrap local catalog once by querying RxCheck dataset for initial concepts
- */
-export async function bootstrapCatalogFromRxCheck(): Promise<RxCheckDrugSearchResult[]> {
-  const existing = getStoredDrugCatalog();
-  if (existing.length >= 10) return existing;
-
-  const seedQueries = ['war', 'asp', 'lis', 'met', 'eth', 'ser', 'ibu', 'alp', 'tra', 'cyp', 'pot'];
-  const fetched: RxCheckDrugSearchResult[] = [];
-
-  for (const q of seedQueries) {
-    try {
-      const res = await fetch(`${BASE_URL}/drugs/search?q=${q}`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.results) fetched.push(...data.results);
-      }
-    } catch {
-      // Continue
-    }
-  }
-
-  storeDrugsToCatalog(fetched);
-  return getStoredDrugCatalog();
 }
 
 /**
@@ -255,10 +204,6 @@ export async function fetchSinglePair(
 /**
  * Polypharmacy Evaluation as specified in https://rxcheck.dev/docs:
  * Evaluates all n-choose-2 pairs for a list of 2–10 drugs.
- * 
- * 1. Calls GET /v1/interactions/polypharmacy?drugs=... (available on Growth+ tier)
- * 2. If free tier (returns 403 tier_restriction), evaluates the n-choose-2 pairs via /v1/interactions
- *    with local caching, producing the exact same summary structure.
  */
 export async function checkPolypharmacyInteractions(
   drugs: string[],
@@ -329,7 +274,7 @@ export async function checkPolypharmacyInteractions(
       };
     }
   } catch {
-    // If network or tier restriction occurs, fall through to client-coordinated n-choose-2
+    // If tier restriction occurs on free tier, fall through to coordinated n-choose-2
   }
 
   // Fallback for Free tier: evaluate the exact N-choose-2 pairs: N*(N-1)/2
@@ -350,7 +295,6 @@ export async function checkPolypharmacyInteractions(
     if (onProgress) onProgress(completed, pairs.length);
   }
 
-  // Sort by severity (Major first)
   const severityRank: Record<string, number> = {
     contraindicated: 5,
     major: 4,
@@ -386,15 +330,12 @@ export async function checkPolypharmacyInteractions(
 }
 
 /**
- * Dynamically extract clinical symptoms, adverse signs, and warning cues
- * directly from the text returned by RxCheck records.
- * Zero hardcoded symptoms!
+ * Dynamically extract clinical symptoms directly from the text returned by RxCheck records.
  */
 export function extractSymptomsFromRecords(results: EvaluatedDrugPair[]): ExtractedClinicalSymptom[] {
   const extracted: ExtractedClinicalSymptom[] = [];
   const seenNames = new Set<string>();
 
-  // Clinical terms to look for inside returned RxCheck management and significance sentences
   const symptomKeywords = [
     { name: 'Unusual bleeding / prolonged bleeding', test: /\b(bleed|bleeding|hemorrhage)\b/i, isRedFlag: true },
     { name: 'Unusual bruising', test: /\b(bruis|bruising)\b/i, isRedFlag: true },
@@ -415,7 +356,6 @@ export function extractSymptomsFromRecords(results: EvaluatedDrugPair[]): Extrac
     const fullText = `${pair.clinicalSignificance} ${pair.management} ${pair.mechanism}`;
     if (!fullText.trim()) continue;
 
-    // Break into sentences
     const sentences = fullText.split(/(?<=[.?!])\s+/);
 
     for (const kw of symptomKeywords) {
