@@ -88,9 +88,9 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
               justifyContent: 'center',
               fontWeight: 800,
               fontSize: '0.72rem',
-              color: '#161618',
+              color: theme.palette.error.contrastText,
               px: 1.2,
-              '& .MuiChip-label': { p: 0, color: '#161618', lineHeight: 1 },
+              '& .MuiChip-label': { p: 0, color: theme.palette.error.contrastText, lineHeight: 1 },
             }}
           />
         );

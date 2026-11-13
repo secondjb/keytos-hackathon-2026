@@ -63,11 +63,11 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
             borderRadius: '13px',
             fontSize: '0.72rem',
             fontWeight: 800,
-            color: '#161618',
+            color: theme.palette.error.contrastText,
             px: 1.2,
             '& .MuiChip-label': {
               p: 0,
-              color: '#161618',
+              color: theme.palette.error.contrastText,
               lineHeight: 1,
             },
           }}

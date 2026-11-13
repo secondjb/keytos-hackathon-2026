@@ -138,12 +138,12 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({
                     fontWeight: 800,
                     fontSize: '0.72rem',
                     ...(item.severity === 'major' ? {
-                      color: '#161618',
+                      color: theme.palette.error.contrastText,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       px: 1.2,
-                      '& .MuiChip-label': { p: 0, color: '#161618', lineHeight: 1 },
+                      '& .MuiChip-label': { p: 0, color: theme.palette.error.contrastText, lineHeight: 1 },
                     } : {}),
                   }}
                 />

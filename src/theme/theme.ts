@@ -1,5 +1,14 @@
 import { createTheme, responsiveFontSizes, type Theme, type ThemeOptions } from '@mui/material/styles';
 
+declare module '@mui/material/styles' {
+  interface Palette {
+    chipText?: string;
+  }
+  interface PaletteOptions {
+    chipText?: string;
+  }
+}
+
 export type ThemeMode = 'light' | 'dark';
 
 export const offWhite = '#fafafa';
@@ -57,7 +66,10 @@ export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
         styleOverrides: {
           root: {
             borderRadius: 6,
-            fontWeight: 600,
+            fontWeight: 700,
+          },
+          colorError: {
+            color: isDark ? offWhite : '#ffffff',
           },
         },
       },
@@ -92,7 +104,7 @@ export const dark_steel: Theme = createTheme({
       main: '#E54D58', // Vivid, clean clinical red that pops sharply on neutral charcoal gray
       light: '#ff858f',
       dark: '#b32632',
-      contrastText: '#ffffff',
+      contrastText: offWhite, // '#fafafa' offwhite inside dark mode chips & alerts
     },
     warning: {
       main: '#f59e0b',
@@ -118,6 +130,7 @@ export const dark_steel: Theme = createTheme({
       secondary: offWhite,
     },
     divider: 'rgba(255, 255, 255, 0.09)',
+    chipText: offWhite,
   },
   ...getBaseOptions('dark'),
 });
@@ -144,7 +157,7 @@ export const lightTheme: Theme = createTheme({
       main: '#b91c1c',
       light: '#fca5a5',
       dark: '#991b1b',
-      contrastText: '#ffffff',
+      contrastText: '#ffffff', // Standard crisp white in light mode
     },
     warning: {
       main: '#d97706',
@@ -170,6 +183,7 @@ export const lightTheme: Theme = createTheme({
       secondary: '#475569',
     },
     divider: 'rgba(0, 0, 0, 0.08)',
+    chipText: '#ffffff',
   },
   ...getBaseOptions('light'),
 });

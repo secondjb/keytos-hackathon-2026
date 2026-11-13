@@ -63,11 +63,11 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
               justifyContent: 'center',
               fontWeight: 800,
               fontSize: '0.72rem',
-              color: '#161618',
+              color: theme.palette.error.contrastText,
               px: 1.2,
               '& .MuiChip-label': {
                 p: 0,
-                color: '#161618',
+                color: theme.palette.error.contrastText,
                 lineHeight: 1,
               },
             }}
@@ -85,11 +85,11 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
               justifyContent: 'center',
               fontWeight: 800,
               fontSize: '0.72rem',
-              color: '#161618',
+              color: theme.palette.error.contrastText,
               px: 1.2,
               '& .MuiChip-label': {
                 p: 0,
-                color: '#161618',
+                color: theme.palette.error.contrastText,
                 lineHeight: 1,
               },
             }}
