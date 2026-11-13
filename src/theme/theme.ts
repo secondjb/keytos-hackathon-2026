@@ -1,56 +1,13 @@
-import { createTheme, responsiveFontSizes, type Theme } from '@mui/material/styles';
+import { createTheme, responsiveFontSizes, type Theme, type ThemeOptions } from '@mui/material/styles';
 
 export type ThemeMode = 'light' | 'dark';
 
-export const createAppTheme = (mode: ThemeMode): Theme => {
+export const offWhite = '#F7F4EE';
+
+export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
   const isDark = mode === 'dark';
 
-  const theme = createTheme({
-    palette: {
-      mode,
-      primary: {
-        main: isDark ? '#38bdf8' : '#0284c7',
-        light: isDark ? '#7dd3fc' : '#38bdf8',
-        dark: isDark ? '#0369a1' : '#075985',
-        contrastText: '#ffffff',
-      },
-      secondary: {
-        main: isDark ? '#fb7185' : '#e11d48',
-        light: '#fda4af',
-        dark: '#9f1239',
-        contrastText: '#ffffff',
-      },
-      error: {
-        main: isDark ? '#f87171' : '#b91c1c', // Muted clinical red
-        light: '#fca5a5',
-        dark: '#991b1b',
-        contrastText: '#ffffff',
-      },
-      warning: {
-        main: isDark ? '#fbbf24' : '#d97706',
-        light: '#fde68a',
-        dark: '#b45309',
-      },
-      info: {
-        main: isDark ? '#38bdf8' : '#0284c7',
-        light: '#7dd3fc',
-        dark: '#0369a1',
-      },
-      success: {
-        main: isDark ? '#34d399' : '#059669',
-        light: '#6ee7b7',
-        dark: '#047857',
-      },
-      background: {
-        default: isDark ? '#0b1120' : '#f8fafc',
-        paper: isDark ? '#131e33' : '#ffffff',
-      },
-      text: {
-        primary: isDark ? '#f1f5f9' : '#0f172a',
-        secondary: isDark ? '#94a3b8' : '#475569',
-      },
-      divider: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
-    },
+  return {
     typography: {
       fontFamily: [
         '-apple-system',
@@ -79,7 +36,7 @@ export const createAppTheme = (mode: ThemeMode): Theme => {
           root: {
             backgroundImage: 'none',
             borderRadius: 12,
-            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
+            border: isDark ? '1px solid rgba(237, 207, 181, 0.15)' : '1px solid rgba(0, 0, 0, 0.08)',
             boxShadow: 'none', // Remove all glows
           },
         },
@@ -113,7 +70,107 @@ export const createAppTheme = (mode: ThemeMode): Theme => {
         },
       },
     },
-  });
+  };
+};
 
-  return responsiveFontSizes(theme);
+export const dark_almond: Theme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#EDCFB5',
+      light: '#f5e4d4',
+      dark: '#c9a98d',
+      contrastText: '#2B170E',
+    },
+    secondary: {
+      main: '#d4a373',
+      light: '#faedcd',
+      dark: '#bc6c25',
+      contrastText: '#2B170E',
+    },
+    error: {
+      main: '#b91c1c',
+      light: '#fca5a5',
+      dark: '#991b1b',
+      contrastText: '#ffffff',
+    },
+    warning: {
+      main: '#fbbf24',
+      light: '#fde68a',
+      dark: '#b45309',
+    },
+    info: {
+      main: '#EDCFB5',
+      light: '#f5e4d4',
+      dark: '#c9a98d',
+    },
+    success: {
+      main: '#34d399',
+      light: '#6ee7b7',
+      dark: '#047857',
+    },
+    background: {
+      default: '#2B170E',
+      paper: '#52392e',
+    },
+    text: {
+      primary: offWhite,
+      secondary: offWhite,
+    },
+    divider: 'rgba(237, 207, 181, 0.15)',
+  },
+  ...getBaseOptions('dark'),
+});
+
+export const lightTheme: Theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#0284c7',
+      light: '#38bdf8',
+      dark: '#075985',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#e11d48',
+      light: '#fda4af',
+      dark: '#9f1239',
+      contrastText: '#ffffff',
+    },
+    error: {
+      main: '#b91c1c',
+      light: '#fca5a5',
+      dark: '#991b1b',
+      contrastText: '#ffffff',
+    },
+    warning: {
+      main: '#d97706',
+      light: '#fde68a',
+      dark: '#b45309',
+    },
+    info: {
+      main: '#0284c7',
+      light: '#7dd3fc',
+      dark: '#0369a1',
+    },
+    success: {
+      main: '#059669',
+      light: '#6ee7b7',
+      dark: '#047857',
+    },
+    background: {
+      default: '#f8fafc',
+      paper: '#ffffff',
+    },
+    text: {
+      primary: '#0f172a',
+      secondary: '#475569',
+    },
+    divider: 'rgba(0, 0, 0, 0.08)',
+  },
+  ...getBaseOptions('light'),
+});
+
+export const createAppTheme = (mode: ThemeMode): Theme => {
+  return responsiveFontSizes(mode === 'dark' ? dark_almond : lightTheme);
 };
