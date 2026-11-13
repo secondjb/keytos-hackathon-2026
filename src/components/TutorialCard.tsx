@@ -30,6 +30,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
         border: `1px solid ${theme.palette.divider}`,
         height: '100%',
         bgcolor: 'background.paper',
+        boxShadow: 'none',
       }}
     >
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
@@ -39,7 +40,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
             sx={{
               p: 1.2,
               borderRadius: 2,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 211, 238, 0.12)' : 'rgba(2, 132, 199, 0.1)',
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(56, 189, 248, 0.12)' : 'rgba(2, 132, 199, 0.1)',
               color: 'primary.main',
               display: 'flex',
             }}
@@ -61,17 +62,17 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
           lifestyle substances, and supplements directly from the active RxCheck medical database.
         </Typography>
 
-        {/* 3 Step Tutorial */}
+        {/* 3 Step Tutorial: Circles vertically centered with text */}
         <Typography variant="subtitle2" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: 'primary.main', mb: 2 }}>
           Quick Guide & Steps:
         </Typography>
 
-        <Stack spacing={2} sx={{ mb: 3.5 }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+        <Stack spacing={2.5} sx={{ mb: 3.5 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Box
               sx={{
-                width: 32,
-                height: 32,
+                width: 34,
+                height: 34,
                 borderRadius: '50%',
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
@@ -95,11 +96,11 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Box
               sx={{
-                width: 32,
-                height: 32,
+                width: 34,
+                height: 34,
                 borderRadius: '50%',
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
@@ -118,16 +119,16 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
                 Run Interaction Evaluation
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Click <strong>&ldquo;Evaluate Interactions&rdquo;</strong>. RxCheck evaluates every unique pair in your regimen.
+                Click <strong>&ldquo;Check Interactions&rdquo;</strong>. RxCheck evaluates every unique pair in your regimen.
               </Typography>
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Box
               sx={{
-                width: 32,
-                height: 32,
+                width: 34,
+                height: 34,
                 borderRadius: '50%',
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
@@ -155,19 +156,19 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
         <Divider sx={{ my: 3 }} />
 
         {/* Mandatory Clinical Disclaimers */}
-        <Typography variant="subtitle2" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: 'error.main', mb: 1.5 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: 'text.secondary', mb: 1.5 }}>
           Important Clinical Disclaimers:
         </Typography>
 
         <Stack spacing={2}>
-          <Alert severity="warning" variant="outlined" icon={<WarningAmberIcon />}>
+          <Alert severity="warning" variant="outlined" icon={<WarningAmberIcon />} sx={{ boxShadow: 'none' }}>
             <AlertTitle sx={{ fontWeight: 700 }}>Consult Your Healthcare Provider</AlertTitle>
             RxCheck does not replace professional clinical judgment. If dangerous drug interactions or
             <strong> no results </strong> are returned, you must check with your physician or pharmacist.
             An absence of an interaction in the dataset does <strong>NOT</strong> establish safety.
           </Alert>
 
-          <Alert severity="info" variant="outlined" icon={<LocalHospitalIcon />}>
+          <Alert severity="info" variant="outlined" icon={<LocalHospitalIcon />} sx={{ boxShadow: 'none' }}>
             <AlertTitle sx={{ fontWeight: 700 }}>Emergency Services</AlertTitle>
             If you are experiencing severe adverse symptoms such as difficulty breathing, sudden severe
             chest pain, or signs of internal bleeding, call <strong>911</strong> immediately or contact Poison Help at <strong>1-800-222-1222</strong>.
@@ -181,10 +182,10 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
               color="primary"
               size="small"
               startIcon={<SearchIcon />}
-              onClick={() => onLoadExample(['Warfarin', 'Aspirin'])}
+              onClick={() => onLoadExample(['Aspirin (Acetylsalicylic acid)', 'Warfarin'])}
               sx={{ fontWeight: 600 }}
             >
-              Load Example Regimen (Warfarin + Aspirin)
+              Load Example Regimen (Aspirin + Warfarin)
             </Button>
           </Box>
         )}

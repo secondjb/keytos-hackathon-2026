@@ -19,7 +19,7 @@ import MedicationIcon from '@mui/icons-material/Medication';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import AddIcon from '@mui/icons-material/Add';
 import { searchDrugsFromRxCheck } from '../services/rxCheckApi';
 import type { RxCheckDrugSearchResult } from '../types/rxcheck';
 
@@ -29,6 +29,17 @@ interface DrugInputProps {
   onEvaluate: () => void;
   isLoading: boolean;
 }
+
+const formatDrugLabel = (option: string | RxCheckDrugSearchResult): string => {
+  if (typeof option === 'string') return option;
+  if (option.generic_name && option.generic_name.trim()) {
+    const genericCap = option.generic_name.charAt(0).toUpperCase() + option.generic_name.slice(1);
+    if (genericCap.toLowerCase() !== option.name.toLowerCase()) {
+      return `${genericCap} (${option.name})`;
+    }
+  }
+  return option.name;
+};
 
 export const DrugInput: React.FC<DrugInputProps> = ({
   drugs,
@@ -64,18 +75,17 @@ export const DrugInput: React.FC<DrugInputProps> = ({
 
   const handleAddDrug = (candidate: string | RxCheckDrugSearchResult) => {
     setInputError('');
-    const nameToAdd = typeof candidate === 'string' ? candidate.trim() : candidate.name.trim();
-    if (!nameToAdd) return;
+    const label = formatDrugLabel(candidate).trim();
+    if (!label) return;
 
-    if (drugs.some(d => d.toLowerCase() === nameToAdd.toLowerCase())) {
-      setInputError(`"${nameToAdd}" is already in your regimen list.`);
+    if (drugs.some(d => d.toLowerCase() === label.toLowerCase())) {
+      setInputError(`"${label}" is already in your regimen list.`);
       setInputValue('');
       setOptions([]);
       return;
     }
 
-    onChangeDrugs([...drugs, nameToAdd]);
-    // Clear search input and options immediately
+    onChangeDrugs([...drugs, label]);
     setInputValue('');
     setOptions([]);
   };
@@ -89,34 +99,28 @@ export const DrugInput: React.FC<DrugInputProps> = ({
   return (
     <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-        {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <MedicationIcon color="primary" fontSize="large" />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800 }}>
+        {/* Header: Centered vertically */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <MedicationIcon color="primary" sx={{ fontSize: 32 }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
               Medication Search
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.2 }}>
               Search live RxCheck dataset records
             </Typography>
           </Box>
         </Box>
 
-        {/* Autocomplete Input: controlled value={null} so selection clears input automatically */}
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+        {/* Autocomplete Input: Plus button same size as the search bar */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <Autocomplete
             freeSolo
             fullWidth
             value={null}
             filterOptions={x => x}
             options={options}
-            getOptionLabel={option => {
-              if (typeof option === 'string') return option;
-              if (option.generic_name && option.generic_name.toLowerCase() !== option.name.toLowerCase()) {
-                return `${option.name} (${option.generic_name})`;
-              }
-              return option.name;
-            }}
+            getOptionLabel={formatDrugLabel}
             inputValue={inputValue}
             onInputChange={(_, newInputValue, reason) => {
               if (reason === 'input' || reason === 'clear') {
@@ -137,7 +141,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                 <TextField
                   {...restParams}
                   placeholder="Search drug (e.g. aspirin, warfarin, ethanol)..."
-                  helperText="Click a matching record or press Enter / + to add"
+                  helperText="Dropdown populates live from RxCheck dataset"
                   onKeyDown={e => {
                     if (e.key === 'Enter' && inputValue.trim()) {
                       e.preventDefault();
@@ -169,9 +173,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
             }}
             renderOption={(props, option) => {
               const { key, ...restProps } = props;
-              const isObj = typeof option !== 'string';
-              const name = isObj ? option.name : option;
-              const generic = isObj ? option.generic_name : null;
+              const formatted = formatDrugLabel(option);
 
               return (
                 <Box
@@ -179,22 +181,14 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                   component="li"
                   {...restProps}
                   sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    width: '100%',
-                    py: 1,
+                    py: 1.2,
                     px: 1.5,
+                    width: '100%',
                   }}
                 >
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                    {name}
+                    {formatted}
                   </Typography>
-                  {generic && generic.toLowerCase() !== name.toLowerCase() && (
-                    <Typography variant="caption" color="text.secondary">
-                      Generic: {generic}
-                    </Typography>
-                  )}
                 </Box>
               );
             }}
@@ -202,11 +196,12 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               inputValue.trim().length >= 2
                 ? isSearching
                   ? 'Searching RxCheck dataset...'
-                  : 'No dataset records found. Press Enter or + to add as custom drug.'
+                  : 'No dataset records found. Press Enter or + to add.'
                 : 'Type at least 2 characters to search'
             }
           />
 
+          {/* Plus icon exactly same height as search bar (56px) */}
           <Button
             variant="contained"
             color="primary"
@@ -218,9 +213,19 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               }
             }}
             disabled={!inputValue.trim()}
-            sx={{ minWidth: 48, px: 2, height: 40, mt: 0.2 }}
+            sx={{
+              height: 56,
+              width: 56,
+              minWidth: 56,
+              borderRadius: 2,
+              p: 0,
+              mb: '23px', // Aligns flush with the input box above the helperText
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <AddCircleIcon />
+            <AddIcon fontSize="medium" />
           </Button>
         </Box>
 
@@ -231,7 +236,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
         )}
 
         {/* Selected Regimen List */}
-        <Box sx={{ mt: 3 }}>
+        <Box sx={{ mt: 2.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
               Regimen List ({drugs.length})
@@ -310,7 +315,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
             disabled={drugs.length < 2 || isLoading}
             startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
             onClick={onEvaluate}
-            sx={{ py: 1.3, fontWeight: 800 }}
+            sx={{ py: 1.4, fontWeight: 800 }}
           >
             {isLoading
               ? 'Analyzing Interactions...'
@@ -318,12 +323,6 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               ? 'Add at least 2 Drugs to Check'
               : `Check Interactions (${numPairs} pair${numPairs === 1 ? '' : 's'})`}
           </Button>
-
-          {drugs.length >= 2 && (
-            <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.secondary', mt: 1 }}>
-              Evaluates all {numPairs} N-choose-2 pairwise interaction combinations
-            </Typography>
-          )}
         </Box>
       </CardContent>
     </Card>

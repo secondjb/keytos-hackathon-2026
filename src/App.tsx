@@ -14,7 +14,6 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import GridViewIcon from '@mui/icons-material/GridView';
 
@@ -43,7 +42,7 @@ export const App: React.FC = () => {
     return (saved as ThemeMode) || (prefersDarkMode ? 'dark' : 'light');
   });
 
-  // State starts empty (no default pre-filled sample)
+  // Regimen list starts empty
   const [drugs, setDrugs] = useState<string[]>([]);
   const [selectedSymptomIds, setSelectedSymptomIds] = useState<string[]>([]);
   const [results, setResults] = useState<EvaluatedDrugPair[]>([]);
@@ -61,7 +60,6 @@ export const App: React.FC = () => {
     localStorage.setItem('rxcheck_theme_mode', next);
   };
 
-  // Poll authoritative usage on mount
   useEffect(() => {
     fetchAuthoritativeUsage();
   }, []);
@@ -103,43 +101,15 @@ export const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-        {/* Top Navigation */}
+        {/* Top Bar with 'RxCheck Clinical Interaction Engine' and 3-dot menu */}
         <Navbar themeMode={themeMode} onToggleTheme={toggleTheme} />
 
-        {/* Hero Header */}
-        <Box
-          sx={{
-            py: { xs: 2.5, md: 3.5 },
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 211, 238, 0.03)' : 'rgba(2, 132, 199, 0.03)',
-          }}
-        >
-          <Container maxWidth="xl">
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.3, borderRadius: 5, bgcolor: 'action.hover', mb: 1 }}>
-                  <VerifiedUserIcon color="primary" sx={{ fontSize: 16 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                    KEYTOS HACK 2026 &bull; HEALTH QUEST TRACK
-                  </Typography>
-                </Box>
-                <Typography variant="h4" component="h1" sx={{ fontWeight: 800, letterSpacing: '-0.5px' }}>
-                  RxCheck Clinical Interaction Engine
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Direct live dataset queries &bull; Polypharmacy N-choose-2 verification &bull; Clinical warning triage
-                </Typography>
-              </Box>
-            </Box>
-          </Container>
-        </Box>
-
-        {/* Main 2-Column Application Body */}
-        <Container maxWidth="xl" sx={{ py: 3.5, flex: 1 }}>
+        {/* Main 2-Column Application Layout */}
+        <Container maxWidth="xl" sx={{ py: 3, flex: 1 }}>
           <Grid container spacing={3}>
             {/* LEFT COLUMN: Drug Search & Regimen Management */}
             <Grid size={{ xs: 12, md: 4.5, lg: 4 }}>
-              <Box sx={{ position: { md: 'sticky' }, top: 84 }}>
+              <Box sx={{ position: { md: 'sticky' }, top: 80 }}>
                 <DrugInput
                   drugs={drugs}
                   onChangeDrugs={setDrugs}
@@ -162,7 +132,7 @@ export const App: React.FC = () => {
                     bgcolor: 'background.paper',
                   }}
                 >
-                  <CircularProgress size={56} sx={{ color: 'primary.main', mb: 3 }} />
+                  <CircularProgress size={48} sx={{ color: 'primary.main', mb: 2.5 }} />
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
                     Querying RxCheck Dataset...
                   </Typography>
@@ -189,7 +159,7 @@ export const App: React.FC = () => {
 
               {/* State C: Evaluated Results Display */}
               {hasEvaluated && !isLoading && (
-                <Stack spacing={3}>
+                <Stack spacing={2.5}>
                   {/* 1. Doctor Warning Banner */}
                   <DoctorWarningBanner
                     results={results}
@@ -252,6 +222,7 @@ export const App: React.FC = () => {
                     sx={{
                       bgcolor: 'background.paper',
                       border: `1px solid ${theme.palette.divider}`,
+                      boxShadow: 'none',
                     }}
                   >
                     <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, color: 'text.secondary', lineHeight: 1.6 }}>

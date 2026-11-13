@@ -9,21 +9,22 @@ export const createAppTheme = (mode: ThemeMode): Theme => {
     palette: {
       mode,
       primary: {
-        main: isDark ? '#22d3ee' : '#0284c7', // Cyan / Medical Blue
-        light: isDark ? '#67e8f9' : '#38bdf8',
-        dark: isDark ? '#0891b2' : '#0369a1',
-        contrastText: isDark ? '#041e2b' : '#ffffff',
+        main: isDark ? '#38bdf8' : '#0284c7',
+        light: isDark ? '#7dd3fc' : '#38bdf8',
+        dark: isDark ? '#0369a1' : '#075985',
+        contrastText: '#ffffff',
       },
       secondary: {
-        main: isDark ? '#f43f5e' : '#e11d48', // Keytos Pink / Neon Rose
-        light: isDark ? '#fb7185' : '#f43f5e',
-        dark: isDark ? '#be123c' : '#9f1239',
+        main: isDark ? '#fb7185' : '#e11d48',
+        light: '#fda4af',
+        dark: '#9f1239',
         contrastText: '#ffffff',
       },
       error: {
-        main: isDark ? '#f87171' : '#dc2626',
+        main: isDark ? '#f87171' : '#b91c1c', // Muted clinical red
         light: '#fca5a5',
-        dark: '#b91c1c',
+        dark: '#991b1b',
+        contrastText: '#ffffff',
       },
       warning: {
         main: isDark ? '#fbbf24' : '#d97706',
@@ -70,29 +71,27 @@ export const createAppTheme = (mode: ThemeMode): Theme => {
       button: { textTransform: 'none', fontWeight: 600 },
     },
     shape: {
-      borderRadius: 12,
+      borderRadius: 10,
     },
     components: {
       MuiCard: {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            borderRadius: 16,
-            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.06)',
-            boxShadow: isDark
-              ? '0 4px 20px -2px rgba(0, 0, 0, 0.5)'
-              : '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+            borderRadius: 12,
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
+            boxShadow: 'none', // Remove all glows
           },
         },
       },
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 10,
+            borderRadius: 8,
             boxShadow: 'none',
             padding: '8px 18px',
             '&:hover': {
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              boxShadow: 'none',
             },
           },
         },
@@ -100,7 +99,7 @@ export const createAppTheme = (mode: ThemeMode): Theme => {
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 6,
             fontWeight: 600,
           },
         },
@@ -108,7 +107,8 @@ export const createAppTheme = (mode: ThemeMode): Theme => {
       MuiAlert: {
         styleOverrides: {
           root: {
-            borderRadius: 12,
+            borderRadius: 10,
+            boxShadow: 'none', // Remove alert glows
           },
         },
       },
