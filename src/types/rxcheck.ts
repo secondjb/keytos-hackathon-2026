@@ -87,6 +87,26 @@ export interface RxCheckDrugSearchResult {
   generic_name: string | null;
   brand_names: string[];
   drug_class: string | null;
+  source?: 'rxcheck' | 'drugs.com' | 'both';
+  code?: string;
+  ddc_id?: number;
+  brand_name_id?: number;
+}
+
+export interface ScrapedInteractionItem {
+  title: string;
+  text: string;
+  severity?: 'Major' | 'Moderate' | 'Minor' | 'Unknown';
+}
+
+export interface ScrapedInteractionReport {
+  url: string;
+  title: string;
+  drug_interactions: ScrapedInteractionItem[];
+  duplications: ScrapedInteractionItem[];
+  food_interactions: ScrapedInteractionItem[];
+  disease_interactions: ScrapedInteractionItem[];
+  resolved_drugs?: Array<{ code: string; name: string }>;
 }
 
 export interface RxCheckPolypharmacySummary {

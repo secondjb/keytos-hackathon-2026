@@ -18,6 +18,7 @@ import { Navbar } from './components/Navbar';
 import { DrugInput } from './components/DrugInput';
 import { TutorialCard } from './components/TutorialCard';
 import { InteractionCard } from './components/InteractionCard';
+import { DrugsComReportCard } from './components/DrugsComReportCard';
 import { DoctorWarningBanner } from './components/DoctorWarningBanner';
 import { RecreationalAdvisory } from './components/RecreationalAdvisory';
 import { SymptomSelector } from './components/SymptomSelector';
@@ -28,7 +29,8 @@ import {
   extractSymptomsFromRecords,
   fetchAuthoritativeUsage,
 } from './services/rxCheckApi';
-import type { EvaluatedDrugPair } from './types/rxcheck';
+import { fetchDrugsComInteractions } from './services/scraperApi';
+import type { EvaluatedDrugPair, ScrapedInteractionReport } from './types/rxcheck';
 
 export const App: React.FC = () => {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
@@ -41,6 +43,8 @@ export const App: React.FC = () => {
   const [drugs, setDrugs] = useState<string[]>([]);
   const [selectedSymptomIds, setSelectedSymptomIds] = useState<string[]>([]);
   const [results, setResults] = useState<EvaluatedDrugPair[]>([]);
+  const [scrapedReport, setScrapedReport] = useState<ScrapedInteractionReport | null>(null);
+  const [includeDrugsComScrape, setIncludeDrugsComScrape] = useState<boolean>(true);
   const [hasEvaluated, setHasEvaluated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
@@ -58,22 +62,30 @@ export const App: React.FC = () => {
     fetchAuthoritativeUsage();
   }, []);
 
-  // Run Polypharmacy Evaluation
+  // Run Polypharmacy & Drugs.com Evaluation
   const handleEvaluate = async (drugList = drugs) => {
     if (drugList.length < 2) return;
     setIsLoading(true);
     setProgress({ completed: 0, total: (drugList.length * (drugList.length - 1)) / 2 });
 
     try {
-      const response = await checkPolypharmacyInteractions(drugList, (completed, total) => {
+      // Evaluate RxCheck pairs & Drugs.com scraper concurrently
+      const rxCheckPromise = checkPolypharmacyInteractions(drugList, (completed, total) => {
         setProgress({ completed, total });
       });
 
-      setResults(response.results);
+      const scraperPromise = includeDrugsComScrape
+        ? fetchDrugsComInteractions(drugList)
+        : Promise.resolve(null);
+
+      const [rxResponse, scrapedResponse] = await Promise.all([rxCheckPromise, scraperPromise]);
+
+      setResults(rxResponse.results);
+      setScrapedReport(scrapedResponse);
       setHasEvaluated(true);
       fetchAuthoritativeUsage();
     } catch (err) {
-      console.error('Polypharmacy evaluation failed:', err);
+      console.error('Evaluation failed:', err);
     } finally {
       setIsLoading(false);
       setProgress(null);
@@ -83,11 +95,12 @@ export const App: React.FC = () => {
   // Dynamically extract clinical symptoms directly from RxCheck records
   const dynamicSymptoms = extractSymptomsFromRecords(results);
 
-  // If a drug is deleted or cleared, reset right column to tutorial
+  // If a drug is deleted or cleared, reset right column
   const handleDrugsChange = (newDrugs: string[]) => {
     if (newDrugs.length < drugs.length || newDrugs.length < 2) {
       setHasEvaluated(false);
       setResults([]);
+      setScrapedReport(null);
       setSelectedSymptomIds([]);
     }
     setDrugs(newDrugs);
@@ -119,6 +132,8 @@ export const App: React.FC = () => {
                   onChangeDrugs={handleDrugsChange}
                   onEvaluate={() => handleEvaluate(drugs)}
                   isLoading={isLoading}
+                  includeDrugsComScrape={includeDrugsComScrape}
+                  onToggleDrugsComScrape={setIncludeDrugsComScrape}
                 />
               </Box>
             </Grid>
@@ -139,10 +154,10 @@ export const App: React.FC = () => {
                 >
                   <CircularProgress size={44} sx={{ color: 'primary.main', mb: 2.5 }} />
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
-                    Querying RxCheck Dataset...
+                    Querying RxCheck & Drugs.com Scraper...
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 440, mx: 'auto' }}>
-                    Evaluating pairwise interactions for your active medications.
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 460, mx: 'auto' }}>
+                    Evaluating pairwise interactions across the clinical datasets and scraping live Drugs.com reports.
                     {progress && (
                       <Box component="span" sx={{ display: 'block', mt: 1, fontWeight: 700, color: 'primary.main' }}>
                         Evaluated {progress.completed} of {progress.total} pairs
@@ -165,23 +180,26 @@ export const App: React.FC = () => {
               {/* State C: Evaluated Results Display */}
               {hasEvaluated && !isLoading && (
                 <Stack spacing={2.5}>
-                  {/* 1. Doctor Warning Banner with same red outline as card */}
+                  {/* 1. Doctor Warning Banner */}
                   <DoctorWarningBanner
                     results={results}
                     onOpenReport={() => setDoctorModalOpen(true)}
                   />
 
-                  {/* 2. Dynamic Symptoms Extracted from RxCheck Records */}
+                  {/* 2. Drugs.com Scraped Report (if enabled & available) */}
+                  {scrapedReport && <DrugsComReportCard report={scrapedReport} />}
+
+                  {/* 3. Dynamic Symptoms Extracted from RxCheck Records */}
                   <SymptomSelector
                     symptoms={dynamicSymptoms}
                     selectedSymptomIds={selectedSymptomIds}
                     onToggleSymptom={handleToggleSymptom}
                   />
 
-                  {/* 3. Lifestyle & Recreational Substance Advisory */}
+                  {/* 4. Lifestyle & Recreational Substance Advisory */}
                   <RecreationalAdvisory results={results} drugs={drugs} />
 
-                  {/* 4. Results List (Matrix removed) */}
+                  {/* 5. Evaluated Pairs List */}
                   {results.length > 0 && (
                     <Box>
                       <Box sx={{ mb: 2 }}>
@@ -189,7 +207,7 @@ export const App: React.FC = () => {
                           Evaluated Pairs ({results.length})
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Live records from the active RxCheck medical dataset.
+                          Pairwise records from the active RxCheck medical dataset.
                         </Typography>
                       </Box>
 
@@ -212,7 +230,7 @@ export const App: React.FC = () => {
                     }}
                   >
                     <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, color: 'text.secondary', lineHeight: 1.6 }}>
-                      <strong>Clinical Disclaimer:</strong> RxCheck provides interaction records from active medical datasets and does not replace professional clinical judgment. Coverage and field detail vary by record and dataset release. Always consult a qualified physician or licensed pharmacist before initiating, altering, or discontinuing any medication regimen.
+                      <strong>Clinical Disclaimer:</strong> Data is aggregated from active medical datasets and Drugs.com live reports, and does not replace professional clinical judgment. Always consult a qualified physician or licensed pharmacist before altering any medication regimen.
                     </Typography>
                   </Alert>
                 </Stack>
