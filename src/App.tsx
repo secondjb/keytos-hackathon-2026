@@ -51,7 +51,7 @@ export const App: React.FC = () => {
   const [isLoadingDrugsCom, setIsLoadingDrugsCom] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
   const [doctorModalOpen, setDoctorModalOpen] = useState(false);
-  const [evaluatedPairsOpen, setEvaluatedPairsOpen] = useState(false);
+  const [evaluatedPairsOpen, setEvaluatedPairsOpen] = useState(true);
 
   const theme = createAppTheme(themeMode);
 

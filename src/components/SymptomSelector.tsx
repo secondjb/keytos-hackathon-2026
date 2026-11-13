@@ -28,7 +28,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
   symptoms,
   selectedSymptomIds,
   onToggleSymptom,
-  defaultExpanded = false,
+  defaultExpanded = true,
 }) => {
   const theme = useTheme();
   const [isOpen, setIsOpen] = useState(defaultExpanded);

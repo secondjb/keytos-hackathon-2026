@@ -23,8 +23,6 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import ScienceIcon from '@mui/icons-material/Science';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 
 import type { ScrapedInteractionReport, EvaluatedDrugPair } from '../types/rxcheck';
 import {
@@ -44,7 +42,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
   drugs,
   drugsComReport,
   results,
-  defaultExpanded = false,
+  defaultExpanded = true,
 }) => {
   const theme = useTheme();
   const [isSectionOpen, setIsSectionOpen] = useState(defaultExpanded);
@@ -123,11 +121,11 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
     }
   };
 
-  const substances: Array<DietarySubstanceRadar & { sourceId: '(1)' | '(2)'; sourceName: string }> = [
-    { ...radarReport.alcohol, sourceId: '(1)', sourceName: 'Drugs.com' },
-    { ...radarReport.caffeine, sourceId: '(1)', sourceName: 'Drugs.com' },
-    { ...radarReport.grapefruit, sourceId: '(2)', sourceName: 'openFDA' },
-    { ...radarReport.dairy, sourceId: '(2)', sourceName: 'openFDA' },
+  const substances: Array<DietarySubstanceRadar & { sourceId: 'drugscom' | 'openfda'; sourceText: string }> = [
+    { ...radarReport.alcohol, sourceId: 'drugscom', sourceText: 'Source: Drugs.com Food & Lifestyle' },
+    { ...radarReport.caffeine, sourceId: 'drugscom', sourceText: 'Source: Drugs.com Food & Lifestyle' },
+    { ...radarReport.grapefruit, sourceId: 'openfda', sourceText: 'Source: openFDA Food Warnings' },
+    { ...radarReport.dairy, sourceId: 'openfda', sourceText: 'Source: openFDA Food Warnings' },
   ];
 
   return (
@@ -221,47 +219,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
       {/* Collapsible Content */}
       <Collapse in={isSectionOpen} timeout="auto">
         <Divider />
-        <CardContent sx={{ p: { xs: 2.2, md: 2.8 }, pt: { xs: 2.5, md: 2.5 } }}>
-          {/* Authoritative Dual Sources Verified Box */}
-          <Box
-            sx={{
-              p: 2,
-              mb: 2.5,
-              borderRadius: 2,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : '#f8fafc',
-              border: `1px solid ${theme.palette.divider}`,
-              display: 'flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              justifyContent: 'space-between',
-              alignItems: { xs: 'flex-start', sm: 'center' },
-              gap: 1.5,
-            }}
-          >
-            <Box sx={{ width: '100%' }}>
-              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.8 }}>
-                Clinical Data Sources Verified:
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.2 }}>
-                <Chip
-                  icon={<VerifiedUserIcon fontSize="small" />}
-                  label="(1) Primary Source: Drugs.com Food & Lifestyle Section (Live Scraped)"
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.6 }}
-                />
-                <Chip
-                  icon={<ScienceIcon fontSize="small" />}
-                  label="(2) Secondary Source: openFDA Food Interactions Section (FDA-Mandated Warnings)"
-                  size="small"
-                  variant="outlined"
-                  color="secondary"
-                  sx={{ fontWeight: 700, fontSize: '0.75rem', py: 1.6 }}
-                />
-              </Box>
-            </Box>
-          </Box>
-
+        <CardContent sx={{ p: { xs: 2.2, md: 2.8 }, pt: { xs: 2.2, md: 2.2 } }}>
           {/* 4 Substance Radar Cards */}
           <Grid container spacing={2}>
             {substances.map(item => {
@@ -291,7 +249,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                     }}
                   >
                     <Box>
-                      {/* Top Header of Substance Card */}
+                      {/* Top Header of Substance Card: Clean Title + Risk Chip */}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, mb: 1.2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Box
@@ -306,23 +264,9 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                             {getSubstanceIcon(item.category)}
                           </Box>
                           <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, flexWrap: 'wrap' }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                                {item.title}
-                              </Typography>
-                              {/* Prominent Source (1) or (2) Label */}
-                              <Chip
-                                size="small"
-                                label={`${item.sourceId} ${item.sourceName}`}
-                                color={item.sourceId === '(1)' ? 'primary' : 'secondary'}
-                                variant="filled"
-                                sx={{
-                                  fontWeight: 800,
-                                  fontSize: '0.68rem',
-                                  height: 20,
-                                }}
-                              />
-                            </Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                              {item.title}
+                            </Typography>
                             <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                               {item.question}
                             </Typography>
@@ -378,24 +322,37 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                       )}
                     </Box>
 
-                    {/* Detailed Collapsible Drawer for this Substance */}
-                    <Box sx={{ mt: 1.5 }}>
-                      <Button
-                        size="small"
-                        variant="text"
-                        onClick={() => setExpandedSubstance(isExpanded ? null : item.category)}
-                        endIcon={
-                          <ExpandMoreIcon
-                            sx={{
-                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                              transition: 'transform 0.2s',
-                            }}
-                          />
-                        }
-                        sx={{ textTransform: 'none', fontWeight: 700, p: 0, fontSize: '0.78rem' }}
-                      >
-                        {isExpanded ? 'Hide Clinical Mechanism & Guidance' : 'View Clinical Mechanism & Guidance'}
-                      </Button>
+                    {/* Bottom row: Small source text at bottom left + View Details button at bottom right */}
+                    <Box sx={{ mt: 'auto', pt: 1.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.secondary',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {item.sourceText}
+                        </Typography>
+
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => setExpandedSubstance(isExpanded ? null : item.category)}
+                          endIcon={
+                            <ExpandMoreIcon
+                              sx={{
+                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s',
+                              }}
+                            />
+                          }
+                          sx={{ textTransform: 'none', fontWeight: 700, p: 0, fontSize: '0.76rem' }}
+                        >
+                          {isExpanded ? 'Hide Guidance' : 'View Clinical Details'}
+                        </Button>
+                      </Box>
 
                       <Collapse in={isExpanded} timeout="auto">
                         <Box sx={{ mt: 1.5, pt: 1.5, borderTop: `1px dashed ${theme.palette.divider}` }}>
@@ -412,12 +369,12 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                             </Typography>
                           </Alert>
 
-                          {/* Source Citations with (1) and (2) labels */}
+                          {/* Source Citations */}
                           <Box sx={{ bgcolor: 'action.hover', p: 1.2, borderRadius: 1.5, border: `1px solid ${theme.palette.divider}` }}>
-                            {item.sourceId === '(1)' ? (
+                            {item.sourceId === 'drugscom' ? (
                               <>
                                 <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', display: 'block' }}>
-                                  Source (1) &mdash; Drugs.com Food & Lifestyle Section:
+                                  Source: Drugs.com Food & Lifestyle Section:
                                 </Typography>
                                 {item.primarySource.excerpts.map((ex, i) => (
                                   <Typography key={i} variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.72rem', mt: 0.3 }}>
@@ -428,7 +385,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                             ) : (
                               <>
                                 <Typography variant="caption" sx={{ fontWeight: 800, color: 'secondary.main', display: 'block' }}>
-                                  Source (2) &mdash; openFDA Food Interactions Section:
+                                  Source: openFDA Food Interactions Section:
                                 </Typography>
                                 {item.secondarySource.excerpts.map((ex, i) => (
                                   <Typography key={i} variant="caption" sx={{ display: 'block', color: 'text.secondary', fontSize: '0.72rem', mt: 0.3 }}>
