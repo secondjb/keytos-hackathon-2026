@@ -9,20 +9,15 @@ import {
   CircularProgress,
   Stack,
   Alert,
-  Tabs,
-  Tab,
   useMediaQuery,
 } from '@mui/material';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
-import ListAltIcon from '@mui/icons-material/ListAlt';
-import GridViewIcon from '@mui/icons-material/GridView';
 
 import { createAppTheme, type ThemeMode } from './theme/theme';
 import { Navbar } from './components/Navbar';
 import { DrugInput } from './components/DrugInput';
 import { TutorialCard } from './components/TutorialCard';
 import { InteractionCard } from './components/InteractionCard';
-import { InteractionMatrix } from './components/InteractionMatrix';
 import { DoctorWarningBanner } from './components/DoctorWarningBanner';
 import { RecreationalAdvisory } from './components/RecreationalAdvisory';
 import { SymptomSelector } from './components/SymptomSelector';
@@ -50,7 +45,6 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
   const [doctorModalOpen, setDoctorModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'cards' | 'matrix'>('cards');
 
   const theme = createAppTheme(themeMode);
 
@@ -101,7 +95,7 @@ export const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
-        {/* Top Bar with 'RxCheck Clinical Interaction Engine' and 3-dot menu */}
+        {/* Top Bar with 'RxCheck' bold + 'Clinical Interaction Engine' regular */}
         <Navbar themeMode={themeMode} onToggleTheme={toggleTheme} />
 
         {/* Main 2-Column Application Layout */}
@@ -130,9 +124,10 @@ export const App: React.FC = () => {
                     borderRadius: 3,
                     border: `1px solid ${theme.palette.divider}`,
                     bgcolor: 'background.paper',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
                   }}
                 >
-                  <CircularProgress size={48} sx={{ color: 'primary.main', mb: 2.5 }} />
+                  <CircularProgress size={44} sx={{ color: 'primary.main', mb: 2.5 }} />
                   <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>
                     Querying RxCheck Dataset...
                   </Typography>
@@ -160,7 +155,7 @@ export const App: React.FC = () => {
               {/* State C: Evaluated Results Display */}
               {hasEvaluated && !isLoading && (
                 <Stack spacing={2.5}>
-                  {/* 1. Doctor Warning Banner */}
+                  {/* 1. Doctor Warning Banner with same red outline as card */}
                   <DoctorWarningBanner
                     results={results}
                     onOpenReport={() => setDoctorModalOpen(true)}
@@ -176,42 +171,23 @@ export const App: React.FC = () => {
                   {/* 3. Lifestyle & Recreational Substance Advisory */}
                   <RecreationalAdvisory results={results} drugs={drugs} />
 
-                  {/* 4. Results List & Matrix */}
+                  {/* 4. Results List (Matrix removed) */}
                   {results.length > 0 && (
                     <Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1.5 }}>
-                        <Box>
-                          <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                            Evaluated Pairs ({results.length})
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Live records from the active RxCheck medical dataset.
-                          </Typography>
-                        </Box>
-
-                        {drugs.length >= 3 && (
-                          <Tabs
-                            value={activeTab}
-                            onChange={(_, val) => setActiveTab(val)}
-                            textColor="primary"
-                            indicatorColor="primary"
-                            sx={{ minHeight: 36 }}
-                          >
-                            <Tab icon={<ListAltIcon fontSize="small" />} iconPosition="start" label="Cards" value="cards" sx={{ minHeight: 36, py: 0.5 }} />
-                            <Tab icon={<GridViewIcon fontSize="small" />} iconPosition="start" label="Matrix" value="matrix" sx={{ minHeight: 36, py: 0.5 }} />
-                          </Tabs>
-                        )}
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                          Evaluated Pairs ({results.length})
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Live records from the active RxCheck medical dataset.
+                        </Typography>
                       </Box>
 
-                      {drugs.length >= 3 && activeTab === 'matrix' ? (
-                        <InteractionMatrix drugs={drugs} results={results} />
-                      ) : (
-                        <Stack spacing={2}>
-                          {results.map(item => (
-                            <InteractionCard key={item.id} item={item} />
-                          ))}
-                        </Stack>
-                      )}
+                      <Stack spacing={2}>
+                        {results.map(item => (
+                          <InteractionCard key={item.id} item={item} />
+                        ))}
+                      </Stack>
                     </Box>
                   )}
 

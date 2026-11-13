@@ -69,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, md: 3 } }}>
-          {/* Logo & Clean Title */}
+          {/* Logo & Title: Only 'RxCheck' is bold, rest is regular weight */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box
               sx={{
@@ -85,8 +85,11 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
             >
               <HealthAndSafetyIcon fontSize="small" />
             </Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1rem', sm: '1.2rem' }, letterSpacing: '-0.3px' }}>
-              RxCheck Clinical Interaction Engine
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.2rem' }, letterSpacing: '-0.2px' }}>
+              <Box component="span" sx={{ fontWeight: 800 }}>RxCheck</Box>
+              <Box component="span" sx={{ fontWeight: 400, color: 'text.secondary', ml: 0.8 }}>
+                Clinical Interaction Engine
+              </Box>
             </Typography>
           </Box>
 
@@ -100,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
             </Tooltip>
 
             {/* 3-Dot Menu */}
-            <Tooltip title="Settings & Options">
+            <Tooltip title="Options & API Keys">
               <IconButton onClick={handleMenuOpen} color="inherit" size="small" sx={{ border: `1px solid ${theme.palette.divider}` }}>
                 <MoreVertIcon fontSize="small" />
               </IconButton>

@@ -29,7 +29,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
 
   if (symptoms.length === 0) {
     return (
-      <Card elevation={0} sx={{ mb: 3 }}>
+      <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)' }}>
         <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <HealingIcon color="primary" fontSize="large" />
@@ -52,7 +52,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
   const hasSelectedRedFlag = selectedSymptomsList.some(s => s.isRedFlag);
 
   return (
-    <Card elevation={0} sx={{ mb: 3 }}>
+    <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)' }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
           <HealingIcon color="primary" fontSize="large" />
@@ -67,7 +67,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
           </Box>
         </Box>
 
-        {/* Dynamic Symptom Chips Extracted From RxCheck Records */}
+        {/* Dynamic Symptom Chips */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 2 }}>
           {symptoms.map(s => {
             const isSelected = selectedSymptomIds.includes(s.id);
@@ -98,7 +98,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
           })}
         </Box>
 
-        {/* Red Flag Alert if User Checked Any Critical Symptoms */}
+        {/* Red Flag Alert: Dropshadow only, NO glow */}
         {hasSelectedRedFlag && (
           <Alert
             severity="error"
@@ -106,7 +106,8 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
             sx={{
               borderRadius: 2,
               mt: 2,
-              boxShadow: '0 6px 18px rgba(220, 38, 38, 0.35)',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+              bgcolor: theme.palette.mode === 'dark' ? '#991b1b' : '#b91c1c',
             }}
           >
             <AlertTitle sx={{ fontWeight: 800 }}>
@@ -120,7 +121,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
           </Alert>
         )}
 
-        {/* Selected Symptoms Breakdown with Evidence from RxCheck */}
+        {/* Selected Symptoms Breakdown */}
         {selectedSymptomsList.length > 0 && (
           <Stack spacing={1.5} sx={{ mt: 2.5 }}>
             <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: 'text.secondary' }}>
@@ -134,6 +135,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
                   borderRadius: 1.5,
                   bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
                   borderLeft: `3px solid ${s.isRedFlag ? theme.palette.error.main : theme.palette.primary.main}`,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                 }}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: s.isRedFlag ? 'error.main' : 'primary.main' }}>

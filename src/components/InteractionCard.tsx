@@ -17,7 +17,6 @@ import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import WarningIcon from '@mui/icons-material/Warning';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import FlashOnIcon from '@mui/icons-material/FlashOn';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import type { EvaluatedDrugPair, SeverityLevel } from '../types/rxcheck';
 
@@ -34,54 +33,62 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
     (item.clinicalSignificance && item.clinicalSignificance.toLowerCase().includes('could not resolve'));
 
   const getSeverityBadge = (severity: SeverityLevel, isPriority: boolean) => {
+    const chipSx = {
+      height: 26,
+      fontSize: '0.72rem',
+      fontWeight: 800,
+      borderRadius: 1,
+      px: 0.5,
+    };
+
     if (isUnresolved) {
       return (
         <Chip
-          icon={<HelpOutlineOutlinedIcon />}
+          icon={<HelpOutlineOutlinedIcon fontSize="small" />}
           label="UNRESOLVED CONCEPT"
           color="warning"
           variant="outlined"
-          sx={{ fontWeight: 700, fontSize: '0.75rem' }}
+          sx={chipSx}
         />
       );
     }
     if (isPriority || severity === 'major') {
       return (
         <Chip
-          icon={<PriorityHighIcon />}
+          icon={<PriorityHighIcon fontSize="small" />}
           label="MAJOR RISK"
           color="error"
-          sx={{ fontWeight: 800, fontSize: '0.78rem' }}
+          sx={chipSx}
         />
       );
     }
     if (severity === 'moderate') {
       return (
         <Chip
-          icon={<WarningIcon />}
+          icon={<WarningIcon fontSize="small" />}
           label="MODERATE RISK"
           color="warning"
-          sx={{ fontWeight: 700, fontSize: '0.78rem' }}
+          sx={chipSx}
         />
       );
     }
     if (severity === 'minor') {
       return (
         <Chip
-          icon={<InfoOutlinedIcon />}
+          icon={<InfoOutlinedIcon fontSize="small" />}
           label="MINOR / MONITOR"
           color="info"
-          sx={{ fontWeight: 600, fontSize: '0.78rem' }}
+          sx={chipSx}
         />
       );
     }
     return (
       <Chip
-        icon={<CheckCircleOutlinedIcon />}
+        icon={<CheckCircleOutlinedIcon fontSize="small" />}
         label="NO RECORD FOUND"
         variant="outlined"
         color="default"
-        sx={{ fontWeight: 600, fontSize: '0.78rem' }}
+        sx={chipSx}
       />
     );
   };
@@ -104,17 +111,15 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
       elevation={0}
       sx={{
         border: getCardBorder(item.severity, item.isHighPriority),
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
         transition: 'all 0.2s ease-in-out',
         '&:hover': {
-          boxShadow:
-            theme.palette.mode === 'dark'
-              ? '0 6px 24px rgba(0, 0, 0, 0.6)'
-              : '0 6px 24px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
         },
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-        {/* Header Row: Drug Names & Severity Tag */}
+        {/* Header Row: Drug Names & Final 2 Chips of identical height */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -135,24 +140,20 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
             )}
           </Box>
 
+          {/* Final 2 chips: same height and size, cached badge removed */}
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            {item.fromCache && (
-              <Chip
-                icon={<FlashOnIcon fontSize="small" />}
-                label="Cached (0 Quota)"
-                size="small"
-                variant="outlined"
-                color="success"
-                sx={{ fontSize: '0.7rem' }}
-              />
-            )}
             {item.isHighPriority && (
               <Chip
                 label="ONC High Priority"
-                size="small"
                 color="error"
                 variant="outlined"
-                sx={{ fontWeight: 700, fontSize: '0.7rem' }}
+                sx={{
+                  height: 26,
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  borderRadius: 1,
+                  px: 0.5,
+                }}
               />
             )}
             {getSeverityBadge(item.severity, item.isHighPriority)}
@@ -176,8 +177,8 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
               bgcolor: isUnresolved
                 ? theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(254, 243, 199, 0.7)'
                 : item.severity === 'major'
-                ? theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(254, 242, 242, 1)'
-                : theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255, 251, 235, 1)',
+                ? theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(254, 242, 242, 0.9)'
+                : theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255, 251, 235, 0.9)',
               borderLeft: `4px solid ${
                 isUnresolved
                   ? theme.palette.warning.main
