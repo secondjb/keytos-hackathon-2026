@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -8,13 +8,17 @@ import {
   Alert,
   Stack,
   useTheme,
+  IconButton,
+  Collapse,
 } from '@mui/material';
 import ShieldIcon from '@mui/icons-material/Shield';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { EvaluatedDrugPair } from '../types/rxcheck';
 
 interface RecreationalAdvisoryProps {
   results: EvaluatedDrugPair[];
   drugs: string[];
+  defaultExpanded?: boolean;
 }
 
 const RECREATIONAL_SUBSTANCE_NAMES = [
@@ -32,8 +36,13 @@ const RECREATIONAL_SUBSTANCE_NAMES = [
   'psilocybin',
 ];
 
-export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ results, drugs }) => {
+export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({
+  results,
+  drugs,
+  defaultExpanded = true,
+}) => {
   const theme = useTheme();
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
 
   // Detect which active drugs are recreational/lifestyle substances
   const recreationalInRegimen = drugs.filter(d =>
@@ -61,17 +70,46 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ resu
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <ShieldIcon color="secondary" fontSize="large" />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, color: 'secondary.main' }}>
-              Lifestyle & Substance Safety Advisory
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Safety evaluation for: {recreationalInRegimen.join(', ')}
-            </Typography>
+        <Box
+          onClick={() => setIsOpen(!isOpen)}
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            userSelect: 'none',
+            mb: isOpen ? 2 : 0,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <ShieldIcon color="secondary" fontSize="large" />
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: 'secondary.main' }}>
+                Lifestyle & Substance Safety Advisory
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Safety evaluation for: {recreationalInRegimen.join(', ')}
+              </Typography>
+            </Box>
           </Box>
+          <IconButton
+            size="medium"
+            onClick={e => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            aria-label={isOpen ? 'Collapse Advisory' : 'Expand Advisory'}
+            sx={{
+              color: 'secondary.main',
+              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.25s ease-in-out',
+            }}
+          >
+            <ExpandMoreIcon />
+          </IconButton>
         </Box>
+
+        <Collapse in={isOpen} timeout="auto">
 
         <Alert severity="info" variant="outlined" sx={{ mb: 2.5, bgcolor: 'background.paper' }}>
           <strong>Clinical Advisory Note:</strong> Clinical trials for prescription medications frequently exclude recreational substances and alcohol. Even when no interaction record is found in the dataset, remember that a lack of documented trial data does <strong>NOT</strong> establish safety. Always consult your doctor or pharmacist.
@@ -112,6 +150,7 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ resu
             </Box>
           ))}
         </Stack>
+        </Collapse>
       </CardContent>
     </Card>
   );
