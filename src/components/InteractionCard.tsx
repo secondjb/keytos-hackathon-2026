@@ -18,6 +18,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import FlashOnIcon from '@mui/icons-material/FlashOn';
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import type { EvaluatedDrugPair, SeverityLevel } from '../types/rxcheck';
 
 interface InteractionCardProps {
@@ -28,7 +29,22 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(item.severity === 'major');
 
+  const isUnresolved =
+    item.status === 'error' ||
+    (item.clinicalSignificance && item.clinicalSignificance.toLowerCase().includes('could not resolve'));
+
   const getSeverityBadge = (severity: SeverityLevel, isPriority: boolean) => {
+    if (isUnresolved) {
+      return (
+        <Chip
+          icon={<HelpOutlineOutlinedIcon />}
+          label="UNRESOLVED CONCEPT"
+          color="warning"
+          variant="outlined"
+          sx={{ fontWeight: 700, fontSize: '0.75rem' }}
+        />
+      );
+    }
     if (isPriority || severity === 'major') {
       return (
         <Chip
@@ -71,6 +87,9 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
   };
 
   const getCardBorder = (severity: SeverityLevel, isPriority: boolean) => {
+    if (isUnresolved) {
+      return `1.5px dashed ${theme.palette.warning.main}`;
+    }
     if (isPriority || severity === 'major') {
       return `2px solid ${theme.palette.error.main}`;
     }
@@ -87,9 +106,10 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
         border: getCardBorder(item.severity, item.isHighPriority),
         transition: 'all 0.2s ease-in-out',
         '&:hover': {
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 6px 24px rgba(0, 0, 0, 0.6)'
-            : '0 6px 24px rgba(0, 0, 0, 0.08)',
+          boxShadow:
+            theme.palette.mode === 'dark'
+              ? '0 6px 24px rgba(0, 0, 0, 0.6)'
+              : '0 6px 24px rgba(0, 0, 0, 0.08)',
         },
       }}
     >
@@ -110,7 +130,7 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
             </Box>
             {(item.resolvedDrug1 !== item.drug1 || item.resolvedDrug2 !== item.drug2) && (
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-                Clinical concepts: {item.resolvedDrug1} &bull; {item.resolvedDrug2}
+                Resolved dataset concepts: {item.resolvedDrug1} &bull; {item.resolvedDrug2}
               </Typography>
             )}
           </Box>
@@ -153,17 +173,33 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
             sx={{
               p: 2,
               borderRadius: 2,
-              bgcolor: item.severity === 'major'
+              bgcolor: isUnresolved
+                ? theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(254, 243, 199, 0.7)'
+                : item.severity === 'major'
                 ? theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(254, 242, 242, 1)'
                 : theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255, 251, 235, 1)',
               borderLeft: `4px solid ${
-                item.severity === 'major' ? theme.palette.error.main : theme.palette.warning.main
+                isUnresolved
+                  ? theme.palette.warning.main
+                  : item.severity === 'major'
+                  ? theme.palette.error.main
+                  : theme.palette.warning.main
               }`,
               mb: 2,
             }}
           >
-            <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 0.5, color: item.severity === 'major' ? 'error.main' : 'warning.main' }}>
-              Clinical Management & Patient Advice:
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                display: 'block',
+                mb: 0.5,
+                color: isUnresolved ? 'warning.main' : item.severity === 'major' ? 'error.main' : 'warning.main',
+              }}
+            >
+              {isUnresolved ? 'Resolution Advice:' : 'Clinical Management & Patient Advice:'}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
               {item.management}
@@ -171,52 +207,56 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
           </Box>
         )}
 
-        {/* Expandable Mechanism & Scientific Details */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button
-            size="small"
-            color="inherit"
-            onClick={() => setExpanded(!expanded)}
-            endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            sx={{ fontWeight: 600, color: 'text.secondary' }}
-          >
-            {expanded ? 'Hide Mechanism & Details' : 'View Biological Mechanism & Evidence'}
-          </Button>
+        {/* Expandable Mechanism & Details */}
+        {!isUnresolved && (
+          <>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button
+                size="small"
+                color="inherit"
+                onClick={() => setExpanded(!expanded)}
+                endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                sx={{ fontWeight: 600, color: 'text.secondary' }}
+              >
+                {expanded ? 'Hide Mechanism & Details' : 'View Biological Mechanism & Evidence'}
+              </Button>
 
-          {item.sources && item.sources.length > 0 && (
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Sources: {item.sources.join(', ')}
-            </Typography>
-          )}
-        </Box>
-
-        <Collapse in={expanded}>
-          <Divider sx={{ my: 2 }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {item.mechanism && (
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main', mb: 0.5 }}>
-                  Pharmacological Mechanism of Action:
+              {item.sources && item.sources.length > 0 && (
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Sources: {item.sources.join(', ')}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                  {item.mechanism}
-                </Typography>
-              </Box>
-            )}
-
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', pt: 1 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                <strong>Evidence Level:</strong> {item.evidenceLevel || 'Clinical Review'}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                <strong>Severity Score:</strong> {item.severityScore}/4
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                <strong>Evaluated:</strong> {new Date(item.timestamp).toLocaleTimeString()}
-              </Typography>
+              )}
             </Box>
-          </Box>
-        </Collapse>
+
+            <Collapse in={expanded}>
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {item.mechanism && (
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'primary.main', mb: 0.5 }}>
+                      Pharmacological Mechanism of Action:
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                      {item.mechanism}
+                    </Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', pt: 1 }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    <strong>Evidence Level:</strong> {item.evidenceLevel || 'Clinical Review'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    <strong>Severity Score:</strong> {item.severityScore}/4
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    <strong>Evaluated:</strong> {new Date(item.timestamp).toLocaleTimeString()}
+                  </Typography>
+                </Box>
+              </Box>
+            </Collapse>
+          </>
+        )}
       </CardContent>
     </Card>
   );

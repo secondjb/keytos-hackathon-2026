@@ -13,6 +13,38 @@ import { getCachedInteraction, setCachedInteraction } from './cacheService';
 const BASE_URL = import.meta.env.VITE_RXCHECK_BASE_URL || 'https://api.rxcheck.dev/v1';
 const SEARCH_CACHE_PREFIX = 'rxcheck_query_cache_';
 
+// Common clinical aliases for quick brand-to-generic resolution
+const CLINICAL_ALIASES: Record<string, string> = {
+  alcohol: 'ethanol',
+  tylenol: 'acetaminophen',
+  paracetamol: 'acetaminophen',
+  advil: 'ibuprofen',
+  motrin: 'ibuprofen',
+  aleve: 'naproxen',
+  coumadin: 'warfarin',
+  jantoven: 'warfarin',
+  xanax: 'alprazolam',
+  ativan: 'lorazepam',
+  valium: 'diazepam',
+  klonopin: 'clonazepam',
+  zoloft: 'sertraline',
+  prozac: 'fluoxetine',
+  lexapro: 'escitalopram',
+  celexa: 'citalopram',
+  effexor: 'venlafaxine',
+  cymbalta: 'duloxetine',
+  wellbutrin: 'bupropion',
+  plavix: 'clopidogrel',
+  eliquis: 'apixaban',
+  xarelto: 'rivaroxaban',
+  lipitor: 'atorvastatin',
+  crestor: 'rosuvastatin',
+  norvasc: 'amlodipine',
+  ambien: 'zolpidem',
+  weed: 'cannabis',
+  marijuana: 'cannabis',
+};
+
 export const sanitizeDrugInput = (input: string): string => {
   return input
     .replace(/\(.*?\)/g, '')
@@ -22,7 +54,7 @@ export const sanitizeDrugInput = (input: string): string => {
 
 /**
  * Live Drug Search directly from RxCheck dataset (/v1/drugs/search?q=...)
- * Only populates from queries and caches results per query.
+ * Queries live RxCheck endpoint and caches queries.
  */
 export async function searchDrugsFromRxCheck(query: string): Promise<RxCheckDrugSearchResult[]> {
   const clean = query.trim().toLowerCase();
@@ -36,31 +68,47 @@ export async function searchDrugsFromRxCheck(query: string): Promise<RxCheckDrug
       return JSON.parse(cached) as RxCheckDrugSearchResult[];
     }
   } catch {
-    // Continue to network
+    // Continue
   }
 
-  try {
-    const res = await fetch(`${BASE_URL}/drugs/search?q=${encodeURIComponent(clean)}`, {
-      signal: AbortSignal.timeout(4000),
-    });
+  // Check alias (e.g. alcohol -> ethanol, tylenol -> acetaminophen)
+  const aliasTarget = CLINICAL_ALIASES[clean];
+  const queryTerms = [clean];
+  if (aliasTarget && !queryTerms.includes(aliasTarget)) {
+    queryTerms.push(aliasTarget);
+  }
 
-    if (!res.ok) return [];
+  const resultsMap = new Map<string, RxCheckDrugSearchResult>();
 
-    const data: { results: RxCheckDrugSearchResult[]; count: number } = await res.json();
-    const fetchedResults = data.results || [];
-
-    // Cache this query's results
+  for (const term of queryTerms) {
     try {
-      localStorage.setItem(cacheKey, JSON.stringify(fetchedResults));
-    } catch {
-      // Ignore storage errors
-    }
+      const res = await fetch(`${BASE_URL}/drugs/search?q=${encodeURIComponent(term)}`, {
+        signal: AbortSignal.timeout(4000),
+      });
 
-    return fetchedResults;
-  } catch (err) {
-    console.warn('RxCheck drug search failed:', err);
-    return [];
+      if (res.ok) {
+        const data: { results: RxCheckDrugSearchResult[]; count: number } = await res.json();
+        if (data.results && Array.isArray(data.results)) {
+          data.results.forEach(d => {
+            if (d.name) resultsMap.set(d.name.toLowerCase(), d);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn(`RxCheck drug search failed for term "${term}":`, err);
+    }
   }
+
+  const finalResults = Array.from(resultsMap.values());
+
+  // Cache results
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(finalResults));
+  } catch {
+    // Ignore
+  }
+
+  return finalResults;
 }
 
 /**
@@ -135,6 +183,32 @@ export async function fetchSinglePair(
       if (response.status === 503) {
         await new Promise(r => setTimeout(r, 800));
         return fetchSinglePair(rawDrug1, rawDrug2, true);
+      }
+
+      // 400 / 422: Unresolved drug or validation issue
+      if (response.status === 400 || response.status === 422) {
+        const errJson = await response.json().catch(() => null);
+        const errMsg = errJson?.error?.message || `Could not resolve one of the input substances in the clinical dataset.`;
+
+        return {
+          id: pairId,
+          drug1: rawDrug1,
+          drug2: rawDrug2,
+          status: 'no_record_found',
+          severity: 'none',
+          severityScore: 0,
+          isHighPriority: false,
+          resolvedDrug1: rawDrug1,
+          resolvedDrug2: rawDrug2,
+          mechanism: '',
+          clinicalSignificance: errMsg,
+          management: 'Substance could not be resolved in dataset. Check the spelling or search by generic name, and consult your doctor.',
+          evidenceLevel: 'N/A',
+          sources: ['RxCheck Active Dataset'],
+          disclaimer: 'Absence of record or unverified spelling does NOT establish safety.',
+          fromCache: false,
+          timestamp: Date.now(),
+        };
       }
 
       if (!response.ok) {
@@ -274,10 +348,10 @@ export async function checkPolypharmacyInteractions(
       };
     }
   } catch {
-    // If tier restriction occurs on free tier, fall through to coordinated n-choose-2
+    // Continue to coordinated N-choose-2
   }
 
-  // Fallback for Free tier: evaluate the exact N-choose-2 pairs: N*(N-1)/2
+  // Coordinated N-choose-2 pairs
   const pairs: [string, string][] = [];
   for (let i = 0; i < cleanDrugs.length; i++) {
     for (let j = i + 1; j < cleanDrugs.length; j++) {

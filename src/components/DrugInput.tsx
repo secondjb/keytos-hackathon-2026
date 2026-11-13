@@ -13,12 +13,14 @@ import {
   ListItem,
   IconButton,
   Divider,
+  Alert,
   useTheme,
 } from '@mui/material';
 import MedicationIcon from '@mui/icons-material/Medication';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { searchDrugsFromRxCheck } from '../services/rxCheckApi';
 import type { RxCheckDrugSearchResult } from '../types/rxcheck';
 
@@ -39,8 +41,9 @@ export const DrugInput: React.FC<DrugInputProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [options, setOptions] = useState<RxCheckDrugSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [inputError, setInputError] = useState('');
 
-  // ONLY populate options when user types a query (at least 2 chars), and cache per query
+  // Live dynamic search from RxCheck dataset
   useEffect(() => {
     const query = inputValue.trim();
     if (query.length < 2) {
@@ -50,21 +53,27 @@ export const DrugInput: React.FC<DrugInputProps> = ({
     }
 
     setIsSearching(true);
+    setInputError('');
     const timer = setTimeout(async () => {
       const results = await searchDrugsFromRxCheck(query);
       setOptions(results);
       setIsSearching(false);
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [inputValue]);
 
-  const handleAddDrug = (name: string) => {
-    const clean = name.trim();
-    if (!clean) return;
-    if (!drugs.some(d => d.toLowerCase() === clean.toLowerCase())) {
-      onChangeDrugs([...drugs, clean]);
+  const handleAddDrug = (candidate: string | RxCheckDrugSearchResult) => {
+    setInputError('');
+    const nameToAdd = typeof candidate === 'string' ? candidate.trim() : candidate.name.trim();
+    if (!nameToAdd) return;
+
+    if (drugs.some(d => d.toLowerCase() === nameToAdd.toLowerCase())) {
+      setInputError(`"${nameToAdd}" is already in your regimen list.`);
+      return;
     }
+
+    onChangeDrugs([...drugs, nameToAdd]);
     setInputValue('');
     setOptions([]);
   };
@@ -86,92 +95,152 @@ export const DrugInput: React.FC<DrugInputProps> = ({
               Medication Search
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Search live RxCheck dataset records
+              Direct live RxCheck dataset candidate search
             </Typography>
           </Box>
         </Box>
 
-        {/* Autocomplete Input: ONLY populates from user queries */}
-        <Autocomplete
-          freeSolo
-          options={options.map(o => o.name)}
-          inputValue={inputValue}
-          onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
-          onChange={(_, value) => {
-            if (value && typeof value === 'string') {
-              handleAddDrug(value);
-            }
-          }}
-          renderInput={params => {
-            const { slotProps, ...restParams } = params;
-            return (
-              <TextField
-                {...restParams}
-                placeholder="Type drug name (min 2 characters)..."
-                helperText="Dropdown populates live from RxCheck dataset"
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && inputValue.trim()) {
-                    e.preventDefault();
-                    handleAddDrug(inputValue);
-                  }
-                }}
-                slotProps={{
-                  ...slotProps,
-                  input: {
-                    ...slotProps?.input,
-                    endAdornment: (
-                      <>
-                        {isSearching ? (
-                          <CircularProgress color="inherit" size={18} sx={{ mr: 1 }} />
-                        ) : (
-                          <SearchIcon color="action" sx={{ mr: 1 }} />
-                        )}
-                        {slotProps?.input?.endAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            );
-          }}
-          renderOption={(props, option) => {
-            const { key, ...restProps } = props;
-            const found = options.find(o => o.name.toLowerCase() === option.toLowerCase());
-            return (
-              <Box
-                key={key}
-                component="li"
-                {...restProps}
-                sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', py: 1 }}
-              >
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {option}
-                  </Typography>
-                  {found?.generic_name && (
-                    <Typography variant="caption" color="text.secondary">
-                      Generic: {found.generic_name}
+        {/* Autocomplete Input */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+          <Autocomplete
+            freeSolo
+            fullWidth
+            // CRITICAL: disable client-side filter so server-resolved brand/generic names aren't dropped!
+            filterOptions={x => x}
+            options={options}
+            getOptionLabel={option => {
+              if (typeof option === 'string') return option;
+              if (option.generic_name && option.generic_name.toLowerCase() !== option.name.toLowerCase()) {
+                return `${option.name} (${option.generic_name})`;
+              }
+              return option.name;
+            }}
+            inputValue={inputValue}
+            onInputChange={(_, newInputValue) => {
+              setInputValue(newInputValue);
+              if (inputError) setInputError('');
+            }}
+            onChange={(_, value) => {
+              if (value) {
+                handleAddDrug(value);
+              }
+            }}
+            renderInput={params => {
+              const { slotProps, ...restParams } = params;
+              return (
+                <TextField
+                  {...restParams}
+                  placeholder="Search drug (e.g. aspirin, warfarin, ethanol)..."
+                  helperText="Click a matching record or press Enter / + to add"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && inputValue.trim()) {
+                      e.preventDefault();
+                      // If there is an exact or top option from search, prefer that resolved candidate
+                      if (options.length > 0) {
+                        handleAddDrug(options[0]);
+                      } else {
+                        handleAddDrug(inputValue.trim());
+                      }
+                    }
+                  }}
+                  slotProps={{
+                    ...slotProps,
+                    input: {
+                      ...slotProps?.input,
+                      endAdornment: (
+                        <>
+                          {isSearching ? (
+                            <CircularProgress color="inherit" size={18} sx={{ mr: 1 }} />
+                          ) : (
+                            <SearchIcon color="action" sx={{ mr: 1 }} />
+                          )}
+                          {slotProps?.input?.endAdornment}
+                        </>
+                      ),
+                    },
+                  }}
+                />
+              );
+            }}
+            renderOption={(props, option) => {
+              const { key, ...restProps } = props;
+              const isObj = typeof option !== 'string';
+              const name = isObj ? option.name : option;
+              const generic = isObj ? option.generic_name : null;
+              const rxcui = isObj ? option.rxcui : null;
+
+              return (
+                <Box
+                  key={key}
+                  component="li"
+                  {...restProps}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                    py: 1,
+                    px: 1.5,
+                  }}
+                >
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {name}
                     </Typography>
+                    {generic && generic.toLowerCase() !== name.toLowerCase() && (
+                      <Typography variant="caption" color="text.secondary">
+                        Generic: {generic}
+                      </Typography>
+                    )}
+                  </Box>
+                  {rxcui && (
+                    <Chip
+                      label={`RxCUI ${rxcui}`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ fontSize: '0.65rem', height: 20 }}
+                    />
                   )}
                 </Box>
-                {found?.rxcui && (
-                  <Chip
-                    label={`RxCUI ${found.rxcui}`}
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: '0.65rem', height: 20 }}
-                  />
-                )}
-              </Box>
-            );
-          }}
-          noOptionsText={inputValue.trim().length >= 2 ? (isSearching ? "Searching RxCheck..." : "No matching records in dataset") : "Type at least 2 characters to search"}
-        />
+              );
+            }}
+            noOptionsText={
+              inputValue.trim().length >= 2
+                ? isSearching
+                  ? 'Searching RxCheck dataset...'
+                  : 'No dataset records found. Press Enter or + to add as custom drug.'
+                : 'Type at least 2 characters to search'
+            }
+          />
 
-        {/* Selected Medication List */}
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              if (options.length > 0) {
+                handleAddDrug(options[0]);
+              } else if (inputValue.trim()) {
+                handleAddDrug(inputValue.trim());
+              }
+            }}
+            disabled={!inputValue.trim()}
+            sx={{ minWidth: 48, px: 2, height: 40, mt: 0.2 }}
+          >
+            <AddCircleIcon />
+          </Button>
+        </Box>
+
+        {inputError && (
+          <Alert severity="warning" sx={{ mt: 1, py: 0.5, fontSize: '0.8rem' }}>
+            {inputError}
+          </Alert>
+        )}
+
+        {/* Selected Regimen List */}
         <Box sx={{ mt: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
               Regimen List ({drugs.length})
             </Typography>
             {drugs.length > 0 && (
@@ -201,11 +270,11 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                 No medications added yet.
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                Type in the search box above to add 2 or more drugs to evaluate.
+                Search and add at least 2 medications or substances to evaluate pairwise interactions.
               </Typography>
             </Box>
           ) : (
-            <List disablePadding sx={{ maxHeight: 280, overflowY: 'auto' }}>
+            <List disablePadding sx={{ maxHeight: 300, overflowY: 'auto' }}>
               {drugs.map((drugName, idx) => (
                 <ListItem
                   key={drugName + idx}
@@ -220,7 +289,7 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                     justifyContent: 'space-between',
                   }}
                 >
-                  <Typography variant="body2" sx={{ fontWeight: 600, pl: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, pl: 0.5 }}>
                     {drugName}
                   </Typography>
                   <IconButton
@@ -253,13 +322,13 @@ export const DrugInput: React.FC<DrugInputProps> = ({
             {isLoading
               ? 'Analyzing Interactions...'
               : drugs.length < 2
-              ? 'Add at least 2 Drugs'
+              ? 'Add at least 2 Drugs to Check'
               : `Check Interactions (${numPairs} pair${numPairs === 1 ? '' : 's'})`}
           </Button>
 
           {drugs.length >= 2 && (
             <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.secondary', mt: 1 }}>
-              Calculates all {numPairs} N-choose-2 pair combinations
+              Evaluates all {numPairs} N-choose-2 pairwise interaction combinations
             </Typography>
           )}
         </Box>
