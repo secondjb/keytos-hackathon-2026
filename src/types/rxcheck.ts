@@ -95,6 +95,8 @@ export interface RxCheckDrugSearchResult {
 
 export interface ScrapedInteractionItem {
   title: string;
+  subtitle?: string;
+  applies_to?: string[];
   text: string;
   severity?: 'Major' | 'Moderate' | 'Minor' | 'Unknown';
 }

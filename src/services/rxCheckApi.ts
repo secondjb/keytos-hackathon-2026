@@ -46,6 +46,16 @@ const CLINICAL_ALIASES: Record<string, string> = {
 };
 
 export const sanitizeDrugInput = (input: string): string => {
+  // If input contains parenthetical generic name (e.g. "Alprazolam Intensol (alprazolam)"),
+  // prefer the generic active substance for clinical API resolution
+  const parenMatch = input.match(/\((.*?)\)/);
+  if (parenMatch && parenMatch[1] && parenMatch[1].trim()) {
+    const genericCandidate = parenMatch[1].replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+    if (genericCandidate.length >= 2) {
+      return genericCandidate;
+    }
+  }
+
   return input
     .replace(/\(.*?\)/g, '')
     .replace(/[^a-zA-Z0-9\s-]/g, '')
