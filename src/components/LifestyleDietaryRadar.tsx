@@ -20,7 +20,6 @@ import LocalBarIcon from '@mui/icons-material/LocalBar';
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
 import ShieldIcon from '@mui/icons-material/Shield';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
@@ -58,7 +57,6 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
             size="small"
             label="AVOID / CRITICAL HAZARD"
             color="error"
-            icon={<WarningAmberIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -66,12 +64,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
               fontWeight: 800,
               fontSize: '0.72rem',
               color: '#161618',
-              px: 1,
-              '& .MuiChip-icon': {
-                color: '#161618',
-                m: 0,
-                mr: 0.5,
-              },
+              px: 1.2,
               '& .MuiChip-label': {
                 p: 0,
                 color: '#161618',
@@ -86,7 +79,6 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
             size="small"
             label="MAJOR RISK"
             color="error"
-            icon={<WarningAmberIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -94,12 +86,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
               fontWeight: 800,
               fontSize: '0.72rem',
               color: '#161618',
-              px: 1,
-              '& .MuiChip-icon': {
-                color: '#161618',
-                m: 0,
-                mr: 0.5,
-              },
+              px: 1.2,
               '& .MuiChip-label': {
                 p: 0,
                 color: '#161618',
@@ -114,8 +101,7 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
             size="small"
             label="MODERATE CAUTION"
             color="warning"
-            icon={<WarningAmberIcon fontSize="small" />}
-            sx={{ fontWeight: 800, fontSize: '0.72rem' }}
+            sx={{ fontWeight: 800, fontSize: '0.72rem', px: 0.6 }}
           />
         );
       case 'caution':

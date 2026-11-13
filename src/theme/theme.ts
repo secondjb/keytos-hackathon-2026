@@ -2,7 +2,7 @@ import { createTheme, responsiveFontSizes, type Theme, type ThemeOptions } from 
 
 export type ThemeMode = 'light' | 'dark';
 
-export const offWhite = '#F7F4EE';
+export const offWhite = '#fafafa';
 
 export const getBaseOptions = (mode: ThemeMode): ThemeOptions => {
   const isDark = mode === 'dark';

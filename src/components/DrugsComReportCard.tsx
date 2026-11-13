@@ -18,8 +18,6 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
@@ -84,7 +82,6 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
             size="small"
             label="MAJOR"
             color="error"
-            icon={<PriorityHighIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -92,16 +89,15 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
               fontWeight: 800,
               fontSize: '0.72rem',
               color: '#161618',
-              px: 1,
-              '& .MuiChip-icon': { color: '#161618', m: 0, mr: 0.5 },
+              px: 1.2,
               '& .MuiChip-label': { p: 0, color: '#161618', lineHeight: 1 },
             }}
           />
         );
       case 'moderate':
-        return <Chip size="small" label="MODERATE" color="warning" icon={<WarningAmberIcon fontSize="small" />} sx={{ fontWeight: 800 }} />;
+        return <Chip size="small" label="MODERATE" color="warning" sx={{ fontWeight: 800, px: 0.5 }} />;
       case 'minor':
-        return <Chip size="small" label="MINOR" color="info" icon={<InfoOutlinedIcon fontSize="small" />} sx={{ fontWeight: 800 }} />;
+        return <Chip size="small" label="MINOR" color="info" sx={{ fontWeight: 800, px: 0.5 }} />;
       default:
         return <Chip size="small" label={severity || 'NOTE'} variant="outlined" sx={{ fontWeight: 700 }} />;
     }

@@ -12,7 +12,6 @@ import {
   Collapse,
 } from '@mui/material';
 import ShieldIcon from '@mui/icons-material/Shield';
-import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { EvaluatedDrugPair } from '../types/rxcheck';
 
@@ -132,7 +131,6 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({
                   {item.drug1} + {item.drug2}
                 </Typography>
                 <Chip
-                  icon={item.severity === 'major' ? <PriorityHighIcon fontSize="small" sx={{ color: '#161618 !important' }} /> : undefined}
                   label={item.severity === 'major' ? 'MAJOR RISK' : item.severity === 'moderate' ? 'MODERATE RISK' : item.status === 'no_record_found' ? 'NO INTERACTION' : 'EVALUATED'}
                   color={item.severity === 'major' ? 'error' : item.severity === 'moderate' ? 'warning' : 'default'}
                   size="small"
@@ -144,8 +142,7 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      px: 1,
-                      '& .MuiChip-icon': { color: '#161618', m: 0, mr: 0.5 },
+                      px: 1.2,
                       '& .MuiChip-label': { p: 0, color: '#161618', lineHeight: 1 },
                     } : {}),
                   }}

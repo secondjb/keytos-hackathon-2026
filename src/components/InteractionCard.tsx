@@ -14,8 +14,6 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
-import WarningIcon from '@mui/icons-material/Warning';
-import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import type { EvaluatedDrugPair, SeverityLevel } from '../types/rxcheck';
@@ -55,7 +53,6 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
     if (isPriority || severity === 'major') {
       return (
         <Chip
-          icon={<PriorityHighIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
           label="MAJOR RISK"
           color="error"
           sx={{
@@ -67,12 +64,7 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
             fontSize: '0.72rem',
             fontWeight: 800,
             color: '#161618',
-            px: 1,
-            '& .MuiChip-icon': {
-              color: '#161618',
-              m: 0,
-              mr: 0.5,
-            },
+            px: 1.2,
             '& .MuiChip-label': {
               p: 0,
               color: '#161618',
@@ -85,7 +77,6 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
     if (severity === 'moderate') {
       return (
         <Chip
-          icon={<WarningIcon fontSize="small" />}
           label="MODERATE RISK"
           color="warning"
           sx={chipSx}
