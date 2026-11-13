@@ -10,8 +10,11 @@ import {
   AccordionDetails,
   Stack,
   Button,
+  CircularProgress,
   useTheme,
   Alert,
+  Collapse,
+  IconButton,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -24,20 +27,45 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import type { ScrapedInteractionReport } from '../types/rxcheck';
 
 interface DrugsComReportCardProps {
-  report?: ScrapedInteractionReport | null;
+  report: ScrapedInteractionReport | null;
+  isLoading?: boolean;
 }
 
-export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }) => {
+export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, isLoading }) => {
   const theme = useTheme();
-  const [expandedSection, setExpandedSection] = useState<string | false>('drug-interactions');
+  const [isCardOpen, setIsCardOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | false>(false);
 
-  if (!report || typeof report !== 'object') {
-    return null;
+  if (isLoading) {
+    return (
+      <Card
+        elevation={0}
+        sx={{
+          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(237, 207, 181, 0.25)' : 'rgba(14, 165, 233, 0.4)'}`,
+          borderRadius: 2.5,
+          bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'rgba(240, 249, 255, 0.6)',
+        }}
+      >
+        <CardContent sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <CircularProgress size={24} color="primary" />
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+              Compiling Drugs.com Clinical Report...
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Reviewing multi-drug warnings, duplications, and dietary precautions
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    );
   }
 
-  const drugInteractions = Array.isArray(report.drug_interactions) ? report.drug_interactions : [];
-  const duplications = Array.isArray(report.duplications) ? report.duplications : [];
-  const foodInteractions = Array.isArray(report.food_interactions) ? report.food_interactions : [];
+  if (!report) return null;
+
+  const drugInteractions = report.drug_interactions || [];
+  const duplications = report.duplications || [];
+  const foodInteractions = report.food_interactions || [];
 
   const totalInteractions =
     drugInteractions.length +
@@ -65,21 +93,35 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
     <Card
       elevation={0}
       sx={{
-        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(14, 165, 233, 0.4)'}`,
+        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(237, 207, 181, 0.25)' : 'rgba(14, 165, 233, 0.4)'}`,
         borderRadius: 2.5,
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(15, 23, 42, 0.6)' : 'rgba(240, 249, 255, 0.6)',
+        bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'rgba(240, 249, 255, 0.6)',
       }}
     >
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
+        <Box
+          onClick={() => setIsCardOpen(!isCardOpen)}
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 1.5,
+            cursor: 'pointer',
+            userSelect: 'none',
+            mb: isCardOpen ? 2 : 0,
+            borderRadius: 1.5,
+            transition: 'background-color 0.2s',
+          }}
+        >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box
               sx={{
                 p: 1,
                 borderRadius: 2,
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(14, 165, 233, 0.15)',
-                color: theme.palette.mode === 'dark' ? '#38bdf8' : '#0284c7',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(237, 207, 181, 0.15)' : 'rgba(14, 165, 233, 0.15)',
+                color: theme.palette.mode === 'dark' ? 'primary.main' : '#0284c7',
                 display: 'flex',
               }}
             >
@@ -90,40 +132,63 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
                 <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
                   Drugs.com Clinical Report
                 </Typography>
-                <Chip
-                  size="small"
-                  label="Verified Scraping"
-                  sx={{
-                    bgcolor: 'rgba(16, 185, 129, 0.15)',
-                    color: '#10b981',
-                    fontWeight: 700,
-                    fontSize: '0.7rem',
-                    height: 22,
-                  }}
-                />
+                {totalInteractions > 0 && (
+                  <Chip
+                    size="small"
+                    label={`${totalInteractions} Warning${totalInteractions === 1 ? '' : 's'}`}
+                    color="primary"
+                    sx={{ fontWeight: 700, fontSize: '0.72rem', height: 22 }}
+                  />
+                )}
               </Box>
               <Typography variant="caption" color="text.secondary">
-                Aggregated reports from Drugs.com dataset
+                Comprehensive interaction warnings, precautions, and dietary advisories
               </Typography>
             </Box>
           </Box>
 
-          {report.url && (
-            <Button
-              size="small"
-              variant="outlined"
-              endIcon={<OpenInNewIcon />}
-              href={report.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 1.5 }}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {report.url && (
+              <Button
+                size="small"
+                variant="outlined"
+                endIcon={<OpenInNewIcon />}
+                href={report.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 1.5 }}
+              >
+                View on Drugs.com
+              </Button>
+            )}
+            <IconButton
+              size="medium"
+              onClick={e => {
+                e.stopPropagation();
+                setIsCardOpen(!isCardOpen);
+              }}
+              aria-label={isCardOpen ? 'Collapse Drugs.com Report' : 'Expand Drugs.com Report'}
+              sx={{
+                transform: isCardOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.25s ease-in-out',
+                color: 'text.secondary',
+              }}
             >
-              View on Drugs.com
-            </Button>
-          )}
+              <ExpandMoreIcon />
+            </IconButton>
+          </Box>
         </Box>
 
-        {totalInteractions === 0 ? (
+        <Collapse in={isCardOpen} timeout="auto">
+
+        {report.error && (
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+            {report.error}
+          </Alert>
+        )}
+
+        {totalInteractions === 0 && !report.error ? (
           <Alert severity="success" sx={{ borderRadius: 2 }}>
             No significant drug interactions or warnings reported on Drugs.com for this regimen.
           </Alert>
@@ -162,10 +227,17 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
                           border: `1px solid ${theme.palette.divider}`,
                         }}
                       >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, gap: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 800 }}>
-                            {item.title}
-                          </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, gap: 1 }}>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                              {item.title}
+                            </Typography>
+                            {item.subtitle && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
+                                {item.subtitle}
+                              </Typography>
+                            )}
+                          </Box>
                           {getSeverityChip(item.severity)}
                         </Box>
                         <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
@@ -271,6 +343,7 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report }
             )}
           </Stack>
         )}
+        </Collapse>
       </CardContent>
     </Card>
   );

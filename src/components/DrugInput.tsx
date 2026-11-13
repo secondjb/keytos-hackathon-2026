@@ -13,6 +13,7 @@ import {
   IconButton,
   Divider,
   Alert,
+  Chip,
   useTheme,
 } from '@mui/material';
 import MedicationIcon from '@mui/icons-material/Medication';
@@ -21,7 +22,7 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 
-import { searchDrugsUnified } from '../services/scraperApi';
+import { searchDrugsStreaming } from '../services/scraperApi';
 import type { RxCheckDrugSearchResult } from '../types/rxcheck';
 
 interface DrugInputProps {
@@ -31,16 +32,89 @@ interface DrugInputProps {
   isLoading: boolean;
 }
 
-const formatDrugLabel = (option: string | RxCheckDrugSearchResult): string => {
-  if (typeof option === 'string') return option;
+export function formatDisplayDrugName(name: string): string {
+  if (!name) return '';
+  const trimmed = name.trim();
+  // Preserve mixed case brand names (e.g. "Alprazolam Intensol")
+  if (/[a-z]/.test(trimmed) && /[A-Z]/.test(trimmed)) {
+    return trimmed;
+  }
+  return trimmed
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+export const formatDrugLabel = (option: string | RxCheckDrugSearchResult): string => {
+  if (typeof option === 'string') return formatDisplayDrugName(option);
+
+  const primary = formatDisplayDrugName(option.name);
   if (option.generic_name && option.generic_name.trim()) {
-    const genericCap = option.generic_name.charAt(0).toUpperCase() + option.generic_name.slice(1);
-    if (genericCap.toLowerCase() !== option.name.toLowerCase()) {
-      return `${genericCap} (${option.name})`;
+    const genericClean = formatDisplayDrugName(option.generic_name);
+    // If brand name differs from generic, format cleanly as "Brand Name (generic_name)"
+    if (primary.toLowerCase() !== genericClean.toLowerCase()) {
+      return `${primary} (${genericClean.toLowerCase()})`;
     }
   }
-  return option.name;
+  return primary;
 };
+
+export function getActiveSubstancesForDrug(drugStr: string): string[] {
+  const normalized = drugStr.trim().toLowerCase();
+  const results = new Set<string>();
+
+  results.add(normalized);
+
+  const withoutParens = normalized.replace(/\(.*?\)/g, '').trim();
+  if (withoutParens) results.add(withoutParens);
+
+  const match = normalized.match(/\((.*?)\)/);
+  if (match && match[1]) {
+    const inside = match[1].trim();
+    if (inside) results.add(inside);
+  }
+
+  return Array.from(results);
+}
+
+export function findRegimenDuplicate(
+  candidate: string | RxCheckDrugSearchResult,
+  regimen: string[]
+): { isDuplicate: boolean; reason?: string } {
+  const candidateLabel = formatDrugLabel(candidate).trim();
+  const candidateLower = candidateLabel.toLowerCase();
+
+  // 1. Direct label match
+  for (const existing of regimen) {
+    if (existing.trim().toLowerCase() === candidateLower) {
+      return {
+        isDuplicate: true,
+        reason: `"${existing}" is already in your regimen list.`,
+      };
+    }
+  }
+
+  // 2. Active ingredient / generic substance overlap
+  const candidateSubstances = new Set(getActiveSubstancesForDrug(candidateLabel));
+  if (typeof candidate !== 'string' && candidate.generic_name) {
+    candidateSubstances.add(candidate.generic_name.trim().toLowerCase());
+  }
+
+  for (const existing of regimen) {
+    const existingSubstances = getActiveSubstancesForDrug(existing);
+    for (const existingSub of existingSubstances) {
+      if (candidateSubstances.has(existingSub)) {
+        return {
+          isDuplicate: true,
+          reason: `"${candidateLabel}" shares the same active ingredient (${existingSub}) as "${existing}" in your regimen.`,
+        };
+      }
+    }
+  }
+
+  return { isDuplicate: false };
+}
 
 export const DrugInput: React.FC<DrugInputProps> = ({
   drugs,
@@ -54,20 +128,36 @@ export const DrugInput: React.FC<DrugInputProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [inputError, setInputError] = useState('');
 
-  // Primary search: queries Drugs.com first, falls back to RxCheck
+  // Progressive streaming search:
+  // Immediately populates local instant matches (<10ms), then streams in live Drugs.com/RxCheck results
   useEffect(() => {
     const query = inputValue.trim();
-    if (query.length < 2) return;
+    if (query.length < 2) {
+      setOptions([]);
+      setIsSearching(false);
+      return;
+    }
 
     setIsSearching(true);
     setInputError('');
-    const timer = setTimeout(async () => {
-      const results = await searchDrugsUnified(query);
-      setOptions(results);
-      setIsSearching(false);
-    }, 200);
 
-    return () => clearTimeout(timer);
+    const controller = new AbortController();
+
+    searchDrugsStreaming(
+      query,
+      (incomingResults, isDone) => {
+        if (controller.signal.aborted) return;
+        setOptions(incomingResults);
+        if (isDone) {
+          setIsSearching(false);
+        }
+      },
+      controller.signal
+    );
+
+    return () => {
+      controller.abort();
+    };
   }, [inputValue]);
 
   const handleAddDrug = (candidate: string | RxCheckDrugSearchResult) => {
@@ -75,8 +165,9 @@ export const DrugInput: React.FC<DrugInputProps> = ({
     const label = formatDrugLabel(candidate).trim();
     if (!label) return;
 
-    if (drugs.some(d => d.toLowerCase() === label.toLowerCase())) {
-      setInputError(`"${label}" is already in your regimen list.`);
+    const dupCheck = findRegimenDuplicate(candidate, drugs);
+    if (dupCheck.isDuplicate) {
+      setInputError(dupCheck.reason || `"${label}" is already represented in your regimen list.`);
       setInputValue('');
       setOptions([]);
       return;
@@ -192,7 +283,10 @@ export const DrugInput: React.FC<DrugInputProps> = ({
             }}
             renderOption={(props, option) => {
               const { key, ...restProps } = props;
-              const formatted = formatDrugLabel(option);
+              const primaryName = formatDisplayDrugName(option.name);
+              const genericName = option.generic_name ? formatDisplayDrugName(option.generic_name) : null;
+              const isBrand = Boolean(genericName && genericName.toLowerCase() !== primaryName.toLowerCase());
+              const dupCheck = findRegimenDuplicate(option, drugs);
 
               return (
                 <Box
@@ -204,35 +298,47 @@ export const DrugInput: React.FC<DrugInputProps> = ({
                     px: 2,
                     width: '100%',
                     display: 'flex !important',
-                    flexDirection: 'column !important',
-                    alignItems: 'flex-start !important',
-                    justifyContent: 'flex-start !important',
+                    flexDirection: 'row !important',
+                    alignItems: 'center !important',
+                    justifyContent: 'space-between !important',
                     textAlign: 'left !important',
+                    opacity: dupCheck.isDuplicate ? 0.6 : 1,
                   }}
                 >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 700,
-                      textAlign: 'left !important',
-                      width: '100%',
-                      display: 'block',
-                    }}
-                  >
-                    {formatted}
-                  </Typography>
-                  {option.generic_name && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', textAlign: 'left', minWidth: 0, flex: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 700,
+                        textAlign: 'left !important',
+                        width: '100%',
+                        color: dupCheck.isDuplicate ? 'text.secondary' : 'text.primary',
+                      }}
+                    >
+                      {primaryName}
+                    </Typography>
                     <Typography
                       variant="caption"
                       color="text.secondary"
                       sx={{
                         textAlign: 'left !important',
                         width: '100%',
-                        display: 'block',
+                        mt: 0.2,
                       }}
                     >
-                      {option.generic_name}
+                      {isBrand
+                        ? `Brand Name · Contains ${genericName}`
+                        : 'Active Substance / Generic'}
                     </Typography>
+                  </Box>
+
+                  {dupCheck.isDuplicate && (
+                    <Chip
+                      label="In Regimen"
+                      size="small"
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600, ml: 1 }}
+                    />
                   )}
                 </Box>
               );

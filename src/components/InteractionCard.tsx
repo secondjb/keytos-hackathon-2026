@@ -85,10 +85,10 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
     return (
       <Chip
         icon={<CheckCircleOutlinedIcon fontSize="small" />}
-        label="NO RECORD FOUND"
+        label="NO INTERACTION FOUND"
         variant="outlined"
         color="default"
-        sx={chipSx}
+        sx={{ ...chipSx, borderColor: theme.palette.divider, color: 'text.secondary' }}
       />
     );
   };

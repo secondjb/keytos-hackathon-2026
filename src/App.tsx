@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ThemeProvider,
   CssBaseline,
@@ -10,8 +10,11 @@ import {
   Stack,
   Alert,
   useMediaQuery,
+  IconButton,
+  Collapse,
 } from '@mui/material';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 import { createAppTheme, type ThemeMode } from './theme/theme';
 import { Navbar } from './components/Navbar';
@@ -23,13 +26,13 @@ import { DoctorWarningBanner } from './components/DoctorWarningBanner';
 import { RecreationalAdvisory } from './components/RecreationalAdvisory';
 import { SymptomSelector } from './components/SymptomSelector';
 import { DoctorReportModal } from './components/DoctorReportModal';
+import { LifestyleDietaryRadar } from './components/LifestyleDietaryRadar';
 
 import {
-  checkPolypharmacyInteractions,
+  fetchDrugsComInteractions,
+  convertDrugsComReportToPairs,
   extractSymptomsFromRecords,
-  fetchAuthoritativeUsage,
-} from './services/rxCheckApi';
-import { fetchDrugsComInteractions } from './services/scraperApi';
+} from './services/scraperApi';
 import type { EvaluatedDrugPair, ScrapedInteractionReport } from './types/rxcheck';
 
 export const App: React.FC = () => {
@@ -45,8 +48,10 @@ export const App: React.FC = () => {
   const [scrapedReport, setScrapedReport] = useState<ScrapedInteractionReport | null>(null);
   const [hasEvaluated, setHasEvaluated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingDrugsCom, setIsLoadingDrugsCom] = useState(false);
   const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
   const [doctorModalOpen, setDoctorModalOpen] = useState(false);
+  const [evaluatedPairsOpen, setEvaluatedPairsOpen] = useState(false);
 
   const theme = createAppTheme(themeMode);
 
@@ -56,37 +61,40 @@ export const App: React.FC = () => {
     localStorage.setItem('rxcheck_theme_mode', next);
   };
 
-  useEffect(() => {
-    fetchAuthoritativeUsage();
-  }, []);
-
-  // Run Comprehensive Evaluation: Drugs.com Report + Pairwise Clinical Records
+  // Evaluation powered directly by Drugs.com webscraper
   const handleEvaluate = async (drugList = drugs) => {
     if (drugList.length < 2) return;
+    const totalPairs = (drugList.length * (drugList.length - 1)) / 2;
     setIsLoading(true);
-    setProgress({ completed: 0, total: (drugList.length * (drugList.length - 1)) / 2 });
+    setIsLoadingDrugsCom(true);
+    setProgress({ completed: 0, total: totalPairs });
 
     try {
-      const rxCheckPromise = checkPolypharmacyInteractions(drugList, (completed, total) => {
-        setProgress({ completed, total });
-      });
-
-      const drugsComPromise = fetchDrugsComInteractions(drugList).catch(err => {
-        console.warn('Drugs.com fetch warning:', err);
-        return null;
-      });
-
-      const [rxResponse, drugsComResponse] = await Promise.all([rxCheckPromise, drugsComPromise]);
-
-      setResults(rxResponse.results);
-      setScrapedReport(drugsComResponse);
-      setHasEvaluated(true);
-      fetchAuthoritativeUsage();
+      const report = await fetchDrugsComInteractions(drugList);
+      if (report) {
+        setScrapedReport(report);
+        const pairs = convertDrugsComReportToPairs(drugList, report);
+        setProgress({ completed: totalPairs, total: totalPairs });
+        setResults(pairs);
+        setHasEvaluated(true);
+      } else {
+        const fallbackReport: ScrapedInteractionReport = {
+          url: '',
+          title: 'Drug Interaction Report',
+          drug_interactions: [],
+          duplications: [],
+          food_interactions: [],
+          disease_interactions: [],
+        };
+        setScrapedReport(fallbackReport);
+        setResults(convertDrugsComReportToPairs(drugList, fallbackReport));
+        setHasEvaluated(true);
+      }
     } catch (err) {
-      console.error('Evaluation failed:', err);
+      console.error('Drugs.com evaluation error:', err);
     } finally {
       setIsLoading(false);
-      setProgress(null);
+      setIsLoadingDrugsCom(false);
     }
   };
 
@@ -181,8 +189,10 @@ export const App: React.FC = () => {
                     onOpenReport={() => setDoctorModalOpen(true)}
                   />
 
-                  {/* 2. Drugs.com Clinical Report */}
-                  {scrapedReport && <DrugsComReportCard report={scrapedReport} />}
+                  {/* 2. Drugs.com Clinical Report (Loaded or streaming) */}
+                  {(scrapedReport || isLoadingDrugsCom) && (
+                    <DrugsComReportCard report={scrapedReport} isLoading={isLoadingDrugsCom} />
+                  )}
 
                   {/* 3. Adverse Signs & Symptoms */}
                   <SymptomSelector
@@ -196,23 +206,67 @@ export const App: React.FC = () => {
 
                   {/* 5. Evaluated Pairs List */}
                   {results.length > 0 && (
-                    <Box>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                          Evaluated Pairs ({results.length})
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Pairwise clinical interaction records and mechanisms.
-                        </Typography>
+                    <Box
+                      sx={{
+                        p: { xs: 2.2, md: 2.8 },
+                        borderRadius: 2.5,
+                        bgcolor: 'background.paper',
+                        border: `1px solid ${theme.palette.divider}`,
+                        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+                      }}
+                    >
+                      <Box
+                        onClick={() => setEvaluatedPairsOpen(!evaluatedPairsOpen)}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          mb: evaluatedPairsOpen ? 2 : 0,
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                            Evaluated Pairs ({results.length})
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Pairwise clinical interaction records and mechanisms.
+                          </Typography>
+                        </Box>
+                        <IconButton
+                          size="medium"
+                          onClick={e => {
+                            e.stopPropagation();
+                            setEvaluatedPairsOpen(!evaluatedPairsOpen);
+                          }}
+                          aria-label={evaluatedPairsOpen ? 'Collapse Evaluated Pairs' : 'Expand Evaluated Pairs'}
+                          sx={{
+                            color: 'text.secondary',
+                            transform: evaluatedPairsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.25s ease-in-out',
+                          }}
+                        >
+                          <ExpandMoreIcon />
+                        </IconButton>
                       </Box>
 
-                      <Stack spacing={2}>
-                        {results.map(item => (
-                          <InteractionCard key={item.id} item={item} />
-                        ))}
-                      </Stack>
+                      <Collapse in={evaluatedPairsOpen} timeout="auto">
+                        <Stack spacing={2}>
+                          {results.map(item => (
+                            <InteractionCard key={item.id} item={item} />
+                          ))}
+                        </Stack>
+                      </Collapse>
                     </Box>
                   )}
+
+                  {/* 4. Lifestyle & Dietary Risk Radar ("Can I have a drink, coffee, grapefruit, or dairy?") */}
+                  <LifestyleDietaryRadar
+                    drugs={drugs}
+                    drugsComReport={scrapedReport}
+                    results={results}
+                  />
 
                   {/* Clinical Disclaimer Footer */}
                   <Alert

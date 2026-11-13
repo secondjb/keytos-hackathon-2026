@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -9,23 +9,29 @@ import {
   AlertTitle,
   Stack,
   useTheme,
+  IconButton,
+  Collapse,
 } from '@mui/material';
 import HealingIcon from '@mui/icons-material/Healing';
 import EmergencyIcon from '@mui/icons-material/Emergency';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { ExtractedClinicalSymptom } from '../types/rxcheck';
 
 interface SymptomSelectorProps {
   symptoms: ExtractedClinicalSymptom[];
   selectedSymptomIds: string[];
   onToggleSymptom: (id: string) => void;
+  defaultExpanded?: boolean;
 }
 
 export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
   symptoms,
   selectedSymptomIds,
   onToggleSymptom,
+  defaultExpanded = false,
 }) => {
   const theme = useTheme();
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
 
   if (symptoms.length === 0) {
     return (
@@ -53,18 +59,61 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
   return (
     <Card elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)' }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-          <HealingIcon color="primary" fontSize="large" />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Clinical Symptoms & Warning Signs ({symptoms.length})
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              The following symptoms may be associated with your medications.
-              Select any symptoms you are experiencing to evaluate urgency:
-            </Typography>
+        <Box
+          onClick={() => setIsOpen(!isOpen)}
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            userSelect: 'none',
+            mb: isOpen ? 1.5 : 0,
+            transition: 'background-color 0.2s',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <HealingIcon color="primary" fontSize="large" />
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Clinical Symptoms & Warning Signs ({symptoms.length})
+                </Typography>
+                {selectedSymptomsList.length > 0 && (
+                  <Chip
+                    size="small"
+                    label={`${selectedSymptomsList.length} Selected`}
+                    color={hasSelectedRedFlag ? 'error' : 'primary'}
+                    sx={{ fontWeight: 700, fontSize: '0.72rem', height: 22 }}
+                  />
+                )}
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                The following symptoms may be associated with your medications.
+              </Typography>
+            </Box>
           </Box>
+
+          <IconButton
+            size="medium"
+            onClick={e => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            aria-label={isOpen ? 'Collapse Symptoms' : 'Expand Symptoms'}
+            sx={{
+              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.25s ease-in-out',
+              color: 'text.secondary',
+            }}
+          >
+            <ExpandMoreIcon />
+          </IconButton>
         </Box>
+
+        <Collapse in={isOpen} timeout="auto">
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Select any symptoms you are experiencing to evaluate urgency:
+          </Typography>
 
         {/* Dynamic Symptom Chips */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 2 }}>
@@ -106,7 +155,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
               borderRadius: 2,
               mt: 2,
               boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
-              bgcolor: theme.palette.mode === 'dark' ? '#991b1b' : '#b91c1c',
+              bgcolor: 'error.main',
             }}
           >
             <AlertTitle sx={{ fontWeight: 800 }}>
@@ -147,6 +196,7 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
             ))}
           </Stack>
         )}
+        </Collapse>
       </CardContent>
     </Card>
   );
