@@ -58,8 +58,26 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
             size="small"
             label="AVOID / CRITICAL HAZARD"
             color="error"
-            icon={<WarningAmberIcon fontSize="small" />}
-            sx={{ fontWeight: 800, fontSize: '0.72rem' }}
+            icon={<WarningAmberIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: '0.72rem',
+              color: '#161618',
+              px: 1,
+              '& .MuiChip-icon': {
+                color: '#161618',
+                m: 0,
+                mr: 0.5,
+              },
+              '& .MuiChip-label': {
+                p: 0,
+                color: '#161618',
+                lineHeight: 1,
+              },
+            }}
           />
         );
       case 'major':
@@ -68,8 +86,26 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
             size="small"
             label="MAJOR RISK"
             color="error"
-            icon={<WarningAmberIcon fontSize="small" />}
-            sx={{ fontWeight: 800, fontSize: '0.72rem' }}
+            icon={<WarningAmberIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: '0.72rem',
+              color: '#161618',
+              px: 1,
+              '& .MuiChip-icon': {
+                color: '#161618',
+                m: 0,
+                mr: 0.5,
+              },
+              '& .MuiChip-label': {
+                p: 0,
+                color: '#161618',
+                lineHeight: 1,
+              },
+            }}
           />
         );
       case 'moderate':
@@ -250,8 +286,8 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                   >
                     <Box>
                       {/* Top Header of Substance Card: Clean Title + Risk Chip */}
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, mb: 1.2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, mb: 1.2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
                           <Box
                             sx={{
                               p: 0.8,
@@ -259,15 +295,18 @@ export const LifestyleDietaryRadar: React.FC<LifestyleDietaryRadarProps> = ({
                               bgcolor: hasAlert ? 'error.light' : 'action.selected',
                               color: hasAlert ? 'error.contrastText' : 'text.primary',
                               display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
                             }}
                           >
                             {getSubstanceIcon(item.category)}
                           </Box>
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, lineHeight: 1.25, m: 0 }}>
                               {item.title}
                             </Typography>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', lineHeight: 1.25, display: 'block', mt: 0.2 }}>
                               {item.question}
                             </Typography>
                           </Box>

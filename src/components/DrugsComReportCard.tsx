@@ -79,7 +79,25 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
   const getSeverityChip = (severity?: string) => {
     switch (severity?.toLowerCase()) {
       case 'major':
-        return <Chip size="small" label="MAJOR" color="error" icon={<PriorityHighIcon fontSize="small" />} sx={{ fontWeight: 800 }} />;
+        return (
+          <Chip
+            size="small"
+            label="MAJOR"
+            color="error"
+            icon={<PriorityHighIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: '0.72rem',
+              color: '#161618',
+              px: 1,
+              '& .MuiChip-icon': { color: '#161618', m: 0, mr: 0.5 },
+              '& .MuiChip-label': { p: 0, color: '#161618', lineHeight: 1 },
+            }}
+          />
+        );
       case 'moderate':
         return <Chip size="small" label="MODERATE" color="warning" icon={<WarningAmberIcon fontSize="small" />} sx={{ fontWeight: 800 }} />;
       case 'minor':

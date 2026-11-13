@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Card, CardContent, Typography, Chip, useTheme, IconButton, Collapse } from '@mui/material';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import { Box, Card, CardContent, Typography, Button, useTheme, IconButton, Collapse } from '@mui/material';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import PrintIcon from '@mui/icons-material/Print';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -26,19 +25,19 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Dangerous Interaction Card: Same red outline, bigger title */}
+      {/* Normal looking consultation card - not red, accessible colors */}
       {hasMajor && (
         <Card
           elevation={0}
           sx={{
-            border: `2px solid ${theme.palette.error.main}`,
+            border: `1px solid ${theme.palette.divider}`,
             bgcolor: 'background.paper',
             boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
             borderRadius: 2.5,
           }}
         >
           <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-            {/* Top Row: Bigger Title + Horizontal Doctor Summary Chip + Dropdown Arrow */}
+            {/* Top Row: Title + Accessible Doctor Summary Button + Dropdown Arrow */}
             <Box
               onClick={() => setIsOpen(!isOpen)}
               sx={{
@@ -54,42 +53,43 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                <WarningAmberIcon color="error" sx={{ fontSize: 32 }} />
+                <HealthAndSafetyIcon color="primary" sx={{ fontSize: 28 }} />
                 <Typography
                   variant="h6"
                   sx={{
                     fontWeight: 800,
-                    color: 'error.main',
-                    fontSize: { xs: '1.05rem', sm: '1.25rem' },
-                    letterSpacing: '-0.3px',
-                    lineHeight: 1.2,
+                    color: 'text.primary',
+                    fontSize: { xs: '1.02rem', sm: '1.18rem' },
+                    letterSpacing: '-0.2px',
+                    lineHeight: 1.25,
                   }}
                 >
-                  DANGEROUS INTERACTIONS DETECTED — CONSULT YOUR DOCTOR
+                  Clinical Regimen Alert &mdash; Doctor Consultation Advised
                 </Typography>
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Chip
-                  icon={<PrintIcon fontSize="small" />}
-                  label="Doctor Summary"
-                  clickable
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<PrintIcon fontSize="small" />}
                   onClick={e => {
                     e.stopPropagation();
                     onOpenReport();
                   }}
-                  size="small"
-                  variant="outlined"
-                  color="error"
                   sx={{
                     fontWeight: 700,
                     fontSize: '0.78rem',
-                    height: 28,
-                    '&:hover': {
-                      bgcolor: 'action.hover',
-                    },
+                    textTransform: 'none',
+                    borderRadius: 1.8,
+                    py: 0.6,
+                    px: 1.6,
+                    boxShadow: 'none',
                   }}
-                />
+                >
+                  Doctor Summary
+                </Button>
                 <IconButton
                   size="medium"
                   onClick={e => {
@@ -98,7 +98,7 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
                   }}
                   aria-label={isOpen ? 'Collapse Warning Banner' : 'Expand Warning Banner'}
                   sx={{
-                    color: 'error.main',
+                    color: 'text.secondary',
                     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 0.25s ease-in-out',
                   }}
@@ -109,10 +109,12 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
             </Box>
 
             <Collapse in={isOpen} timeout="auto">
-              <Typography variant="body2" color="text.primary" sx={{ fontSize: '0.92rem', lineHeight: 1.6, pl: { sm: 5 } }}>
-                One or more high-risk clinical interactions were detected in your regimen that could cause severe adverse events (e.g., hemorrhaging, arrhythmia, or organ toxicity).
-                <strong> Never discontinue or alter prescription medications without professional clinical supervision. </strong>
-                Contact your doctor or pharmacist right away.
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem', lineHeight: 1.6, pl: { sm: 4.8 } }}>
+                One or more significant clinical interactions were detected in your regimen that could increase risk of adverse events.
+                <Box component="strong" sx={{ color: 'text.primary', display: 'inline' }}>
+                  {' '}Never discontinue or alter prescription medications without professional clinical supervision.{' '}
+                </Box>
+                Review this report with your prescribing doctor or licensed pharmacist.
               </Typography>
             </Collapse>
           </CardContent>
@@ -124,7 +126,7 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
         <Card
           elevation={0}
           sx={{
-            border: `1.5px solid ${theme.palette.warning.main}`,
+            border: `1px solid ${theme.palette.divider}`,
             bgcolor: 'background.paper',
             boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
             borderRadius: 2.5,
@@ -143,9 +145,9 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <HealthAndSafetyIcon color="warning" fontSize="medium" />
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
-                  Unverified Combination (No Record Found) — Consult Your Doctor
+                <HealthAndSafetyIcon color="primary" fontSize="medium" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'text.primary' }}>
+                  Unverified Combination (No Record Found) &mdash; Consult Your Doctor
                 </Typography>
               </Box>
               <IconButton
@@ -166,7 +168,9 @@ export const DoctorWarningBanner: React.FC<DoctorWarningBannerProps> = ({
             <Collapse in={isOpen} timeout="auto">
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem', lineHeight: 1.5, pl: { sm: 4.2 }, mt: 0.5 }}>
                 No documented interaction was found for one or more pairs.
-                <strong> The absence of an interaction record does NOT establish clinical safety. </strong>
+                <Box component="strong" sx={{ color: 'text.primary', display: 'inline' }}>
+                  {' '}The absence of an interaction record does NOT establish clinical safety.{' '}
+                </Box>
                 Always verify safety with your healthcare provider.
               </Typography>
             </Collapse>

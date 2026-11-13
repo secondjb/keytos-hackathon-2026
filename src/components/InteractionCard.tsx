@@ -55,10 +55,30 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
     if (isPriority || severity === 'major') {
       return (
         <Chip
-          icon={<PriorityHighIcon fontSize="small" />}
+          icon={<PriorityHighIcon fontSize="small" sx={{ color: '#161618 !important' }} />}
           label="MAJOR RISK"
           color="error"
-          sx={chipSx}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 26,
+            borderRadius: '13px',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            color: '#161618',
+            px: 1,
+            '& .MuiChip-icon': {
+              color: '#161618',
+              m: 0,
+              mr: 0.5,
+            },
+            '& .MuiChip-label': {
+              p: 0,
+              color: '#161618',
+              lineHeight: 1,
+            },
+          }}
         />
       );
     }
