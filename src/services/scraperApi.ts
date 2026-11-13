@@ -343,16 +343,16 @@ export function convertDrugsComReportToPairs(
       if (matchingItem) {
         const sevLower = (matchingItem.severity || 'Unknown').toLowerCase();
         let severity: SeverityLevel = 'moderate';
-        let severityScore = 6;
+        let severityScore = 2;
         let isHighPriority = false;
 
         if (sevLower === 'major') {
           severity = 'major';
-          severityScore = 9;
+          severityScore = 4;
           isHighPriority = true;
         } else if (sevLower === 'minor') {
           severity = 'minor';
-          severityScore = 3;
+          severityScore = 1;
           isHighPriority = false;
         }
 

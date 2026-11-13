@@ -243,7 +243,7 @@ export const InteractionCard: React.FC<InteractionCardProps> = ({ item }) => {
                     <strong>Evidence Level:</strong> {item.evidenceLevel || 'Clinical Review'}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    <strong>Severity Score:</strong> {item.severityScore}/4
+                    <strong>Severity:</strong> {item.status === 'no_record_found' || item.severity === 'none' ? 'None Documented' : (item.severity.charAt(0).toUpperCase() + item.severity.slice(1))}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                     <strong>Evaluated:</strong> {new Date(item.timestamp).toLocaleTimeString()}
