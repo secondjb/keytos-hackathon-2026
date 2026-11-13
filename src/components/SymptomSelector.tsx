@@ -37,9 +37,11 @@ export const SymptomSelector: React.FC<SymptomSelectorProps> = ({
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
                 Clinical Adverse Signs & Symptoms (RxCheck Dataset)
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Adverse symptoms and warning signs will be dynamically extracted directly from the RxCheck
-                clinical interaction records for your active drug list.
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}>
+                No adverse symptom records found in the active RxCheck dataset for this medication regimen.
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3 }}>
+                (Adverse symptoms and warning signs will be dynamically extracted directly from the RxCheck clinical interaction records.)
               </Typography>
             </Box>
           </Box>

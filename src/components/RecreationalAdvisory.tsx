@@ -74,8 +74,7 @@ export const RecreationalAdvisory: React.FC<RecreationalAdvisoryProps> = ({ resu
         </Box>
 
         <Alert severity="info" variant="outlined" sx={{ mb: 2.5, bgcolor: 'background.paper' }}>
-          RxCheck dataset note: Clinical trials for prescription drugs frequently exclude recreational substances.
-          When RxCheck returns <code>no_record_found</code>, remember that lack of documented trial data does <strong>NOT</strong> establish safety.
+          <strong>Clinical Advisory Note:</strong> Clinical trials for prescription medications frequently exclude recreational substances and alcohol. Even when no interaction record is found in the dataset, remember that a lack of documented trial data does <strong>NOT</strong> establish safety. Always consult your doctor or pharmacist.
         </Alert>
 
         <Stack spacing={2}>

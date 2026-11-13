@@ -83,6 +83,16 @@ export const App: React.FC = () => {
   // Dynamically extract clinical symptoms directly from RxCheck records
   const dynamicSymptoms = extractSymptomsFromRecords(results);
 
+  // If a drug is deleted or cleared, reset right column to tutorial
+  const handleDrugsChange = (newDrugs: string[]) => {
+    if (newDrugs.length < drugs.length || newDrugs.length < 2) {
+      setHasEvaluated(false);
+      setResults([]);
+      setSelectedSymptomIds([]);
+    }
+    setDrugs(newDrugs);
+  };
+
   const handleToggleSymptom = (id: string) => {
     if (selectedSymptomIds.includes(id)) {
       setSelectedSymptomIds(selectedSymptomIds.filter(s => s !== id));
@@ -106,7 +116,7 @@ export const App: React.FC = () => {
               <Box sx={{ position: { md: 'sticky' }, top: 80 }}>
                 <DrugInput
                   drugs={drugs}
-                  onChangeDrugs={setDrugs}
+                  onChangeDrugs={handleDrugsChange}
                   onEvaluate={() => handleEvaluate(drugs)}
                   isLoading={isLoading}
                 />
