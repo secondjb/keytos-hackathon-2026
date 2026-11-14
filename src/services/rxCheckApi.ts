@@ -9,41 +9,10 @@ import type {
 } from '../types/rxcheck';
 import { apiKeysManager } from './apiKeysManager';
 import { getCachedInteraction, setCachedInteraction } from './cacheService';
+import { CLINICAL_ALIASES } from '../data/clinicalRules';
 
 const BASE_URL = import.meta.env?.VITE_RXCHECK_BASE_URL || 'https://api.rxcheck.dev/v1';
 const SEARCH_CACHE_PREFIX = 'rxcheck_query_cache_';
-
-// Common clinical aliases for quick brand-to-generic resolution
-const CLINICAL_ALIASES: Record<string, string> = {
-  alcohol: 'ethanol',
-  tylenol: 'acetaminophen',
-  paracetamol: 'acetaminophen',
-  advil: 'ibuprofen',
-  motrin: 'ibuprofen',
-  aleve: 'naproxen',
-  coumadin: 'warfarin',
-  jantoven: 'warfarin',
-  xanax: 'alprazolam',
-  ativan: 'lorazepam',
-  valium: 'diazepam',
-  klonopin: 'clonazepam',
-  zoloft: 'sertraline',
-  prozac: 'fluoxetine',
-  lexapro: 'escitalopram',
-  celexa: 'citalopram',
-  effexor: 'venlafaxine',
-  cymbalta: 'duloxetine',
-  wellbutrin: 'bupropion',
-  plavix: 'clopidogrel',
-  eliquis: 'apixaban',
-  xarelto: 'rivaroxaban',
-  lipitor: 'atorvastatin',
-  crestor: 'rosuvastatin',
-  norvasc: 'amlodipine',
-  ambien: 'zolpidem',
-  weed: 'cannabis',
-  marijuana: 'cannabis',
-};
 
 export const sanitizeDrugInput = (input: string): string => {
   if (!input) return '';

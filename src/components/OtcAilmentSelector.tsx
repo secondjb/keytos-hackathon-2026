@@ -28,7 +28,7 @@ import BedtimeIcon from '@mui/icons-material/Bedtime';
 import MedicationLiquidIcon from '@mui/icons-material/MedicationLiquid';
 import ClearIcon from '@mui/icons-material/Clear';
 
-import { OTC_CATEGORIES } from '../services/openFdaService';
+import { OTC_CATEGORIES } from '../data';
 
 interface OtcAilmentSelectorProps {
   selectedAilmentId: string | null;
