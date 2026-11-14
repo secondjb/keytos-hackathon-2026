@@ -54,14 +54,14 @@ export const Navbar: React.FC<NavbarProps> = ({ themeMode, onToggleTheme }) => {
           <Typography
             sx={{
               fontFamily: theme.typography.fontFamily,
-              fontSize: { xs: '1.05rem', sm: '1.2rem' },
+              fontSize: { xs: '0.95rem', sm: '1.2rem' },
               letterSpacing: '-0.2px',
               color: 'text.primary',
               lineHeight: 1,
             }}
           >
-            <strong style={{ fontWeight: 800 }}>Clinical</strong>{' '}
-            <span style={{ fontWeight: 400 }}>Interaction Engine</span>
+            <strong style={{ fontWeight: 800 }}>CheckPoint</strong>{' '}
+            <span style={{ fontWeight: 400 }}>Drug Interaction Checker</span>
           </Typography>
         </Box>
 

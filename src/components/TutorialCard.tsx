@@ -49,7 +49,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
           </Box>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 800 }}>
-              How to Use RxCheck
+              How to Use CheckPoint
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Clinical Polypharmacy & Drug Interaction Verification System
@@ -58,8 +58,8 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
         </Box>
 
         <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, lineHeight: 1.6 }}>
-          RxCheck analyzes complex regimens by evaluating all pairwise interactions between medications,
-          lifestyle substances, and supplements directly from the active RxCheck medical database.
+          CheckPoint analyzes complex regimens by evaluating all pairwise interactions between medications,
+          lifestyle substances, and supplements directly from the active medical database.
         </Typography>
 
         {/* 3 Step Tutorial: Circles vertically centered with text */}
@@ -119,7 +119,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
                 Run Interaction Evaluation
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Click <strong>&ldquo;Check Interactions&rdquo;</strong>. RxCheck evaluates every unique pair in your regimen.
+                Click <strong>&ldquo;Check Interactions&rdquo;</strong>. CheckPoint evaluates every unique pair in your regimen.
               </Typography>
             </Box>
           </Box>
@@ -163,7 +163,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({ onLoadExample }) => 
         <Stack spacing={2}>
           <Alert severity="warning" variant="outlined" icon={<WarningAmberIcon />} sx={{ boxShadow: 'none' }}>
             <AlertTitle sx={{ fontWeight: 700 }}>Consult Your Healthcare Provider</AlertTitle>
-            RxCheck does not replace professional clinical judgment. If dangerous drug interactions or
+            CheckPoint does not replace professional clinical judgment. If dangerous drug interactions or
             <strong> no results </strong> are returned, you must check with your physician or pharmacist.
             An absence of an interaction in the dataset does <strong>NOT</strong> establish safety.
           </Alert>
