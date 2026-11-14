@@ -10,7 +10,7 @@ import type {
 import { apiKeysManager } from './apiKeysManager';
 import { getCachedInteraction, setCachedInteraction } from './cacheService';
 
-const BASE_URL = import.meta.env.VITE_RXCHECK_BASE_URL || 'https://api.rxcheck.dev/v1';
+const BASE_URL = import.meta.env?.VITE_RXCHECK_BASE_URL || 'https://api.rxcheck.dev/v1';
 const SEARCH_CACHE_PREFIX = 'rxcheck_query_cache_';
 
 // Common clinical aliases for quick brand-to-generic resolution
@@ -46,20 +46,42 @@ const CLINICAL_ALIASES: Record<string, string> = {
 };
 
 export const sanitizeDrugInput = (input: string): string => {
-  // If input contains parenthetical generic name (e.g. "Alprazolam Intensol (alprazolam)"),
-  // prefer the generic active substance for clinical API resolution
+  if (!input) return '';
+  const base = input.replace(/\(.*?\)/g, '').replace(/[^a-zA-Z0-9\s-]/g, '').trim();
   const parenMatch = input.match(/\((.*?)\)/);
-  if (parenMatch && parenMatch[1] && parenMatch[1].trim()) {
-    const genericCandidate = parenMatch[1].replace(/[^a-zA-Z0-9\s-]/g, '').trim();
-    if (genericCandidate.length >= 2) {
-      return genericCandidate;
+
+  if (parenMatch && parenMatch[1]) {
+    // Split inside parentheses into parts (e.g. "Advil / Motrin" -> ["advil", "motrin"])
+    const insideParts = parenMatch[1]
+      .split(/[/,]|(?:\s+or\s+)/)
+      .map(p => p.replace(/[^a-zA-Z0-9\s-]/g, '').trim().toLowerCase())
+      .filter(p => p.length >= 2);
+
+    const baseLower = base.toLowerCase();
+
+    // If base is a brand alias, resolve to generic active substance
+    if (CLINICAL_ALIASES[baseLower]) {
+      return CLINICAL_ALIASES[baseLower];
+    }
+
+    // Check if any inside part is an alias or active substance
+    for (const part of insideParts) {
+      if (CLINICAL_ALIASES[part]) {
+        return CLINICAL_ALIASES[part];
+      }
+    }
+
+    // If base name is present, use base
+    if (base.length >= 2) {
+      return base;
+    }
+
+    if (insideParts.length > 0 && insideParts[0]) {
+      return insideParts[0];
     }
   }
 
-  return input
-    .replace(/\(.*?\)/g, '')
-    .replace(/[^a-zA-Z0-9\s-]/g, '')
-    .trim();
+  return base;
 };
 
 /**

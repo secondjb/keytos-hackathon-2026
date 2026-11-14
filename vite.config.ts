@@ -54,10 +54,39 @@ function scraperServerPlugin(): Plugin {
     }
   }
 
+  const restartScraper = async (): Promise<boolean> => {
+    console.log('[Scraper] Restart requested. Stopping existing scraper process...')
+    stopScraper()
+    await new Promise(r => setTimeout(r, 600))
+    await startScraper()
+    // Poll health check for up to 6 seconds until ready
+    const startTime = Date.now()
+    while (Date.now() - startTime < 6000) {
+      if (await isServerRunning()) {
+        console.log('[Scraper] Backend is verified online after restart.')
+        return true
+      }
+      await new Promise(r => setTimeout(r, 400))
+    }
+    return false
+  }
+
   return {
     name: 'vite-plugin-scraper-server',
     configureServer(server) {
       startScraper()
+
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url && req.url.startsWith('/api/scraper/restart')) {
+          const ok = await restartScraper()
+          res.setHeader('Content-Type', 'application/json')
+          res.statusCode = ok ? 200 : 500
+          res.end(JSON.stringify({ status: ok ? 'restarted' : 'failed', available: ok, timestamp: Date.now() }))
+          return
+        }
+        next()
+      })
+
       server.httpServer?.on('close', stopScraper)
       process.on('exit', stopScraper)
       process.on('SIGINT', stopScraper)
@@ -65,6 +94,18 @@ function scraperServerPlugin(): Plugin {
     },
     configurePreviewServer(server) {
       startScraper()
+
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url && req.url.startsWith('/api/scraper/restart')) {
+          const ok = await restartScraper()
+          res.setHeader('Content-Type', 'application/json')
+          res.statusCode = ok ? 200 : 500
+          res.end(JSON.stringify({ status: ok ? 'restarted' : 'failed', available: ok, timestamp: Date.now() }))
+          return
+        }
+        next()
+      })
+
       server.httpServer?.on('close', stopScraper)
       process.on('exit', stopScraper)
       process.on('SIGINT', stopScraper)

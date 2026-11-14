@@ -22,15 +22,23 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import type { ScrapedInteractionReport, ScrapedInteractionItem } from '../types/rxcheck';
 import { formatInteractionTitle } from '../utils/formatters';
 
 interface DrugsComReportCardProps {
   report: ScrapedInteractionReport | null;
   isLoading?: boolean;
+  onRestartScraper?: () => void;
+  isRestarting?: boolean;
 }
 
-export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, isLoading }) => {
+export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({
+  report,
+  isLoading,
+  onRestartScraper,
+  isRestarting,
+}) => {
   const theme = useTheme();
   const [isCardOpen, setIsCardOpen] = useState(true);
   const [expandedSection, setExpandedSection] = useState<string | false>('drug-interactions');
@@ -231,7 +239,25 @@ export const DrugsComReportCard: React.FC<DrugsComReportCardProps> = ({ report, 
         <Collapse in={isCardOpen} timeout="auto">
 
         {report.error && (
-          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+          <Alert
+            severity="warning"
+            action={
+              onRestartScraper && (
+                <Button
+                  color="inherit"
+                  size="small"
+                  variant="outlined"
+                  disabled={isRestarting}
+                  startIcon={isRestarting ? <CircularProgress size={14} color="inherit" /> : <RestartAltIcon fontSize="small" />}
+                  onClick={onRestartScraper}
+                  sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 1.5, whiteSpace: 'nowrap' }}
+                >
+                  {isRestarting ? 'Restarting...' : 'Restart Scraper'}
+                </Button>
+              )
+            }
+            sx={{ mb: 2, borderRadius: 2, alignItems: 'center' }}
+          >
             {report.error}
           </Alert>
         )}

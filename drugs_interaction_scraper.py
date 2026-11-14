@@ -10,6 +10,7 @@ Supports two modes:
 """
 
 import json
+import re
 from typing import List, Dict, Any, Optional
 from bs4 import BeautifulSoup
 from scrapling.fetchers import StealthyFetcher, StealthySession

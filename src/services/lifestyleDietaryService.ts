@@ -38,13 +38,25 @@ export interface LifestyleDietaryRadarReport {
   highestRisk: DietaryRiskLevel;
 }
 
-// Helper: Normalize drug name
-function normalizeDrug(name: string): string {
-  const paren = name.match(/\((.*?)\)/);
-  if (paren && paren[1]) {
-    return paren[1].toLowerCase().replace(/[^a-z0-9]/g, '');
+// Helper: Extract all normalized drug tokens (base name and parenthetical brands)
+function extractDrugNormTokens(name: string): string[] {
+  const tokens = new Set<string>();
+  const clean = name.toLowerCase().trim();
+  const directClean = clean.replace(/[^a-z0-9]/g, '');
+  if (directClean) tokens.add(directClean);
+
+  const outside = clean.replace(/\(.*?\)/g, '').replace(/[^a-z0-9]/g, '').trim();
+  if (outside) tokens.add(outside);
+
+  const parens = clean.matchAll(/\((.*?)\)/g);
+  for (const m of parens) {
+    const inside = m[1];
+    inside.split(/[/,\s]+/).forEach(p => {
+      const cp = p.replace(/[^a-z0-9]/g, '').trim();
+      if (cp.length >= 2) tokens.add(cp);
+    });
   }
-  return name.toLowerCase().replace(/\(.*?\)/g, '').replace(/[^a-z0-9]/g, '');
+  return Array.from(tokens);
 }
 
 // Drug class matching tables
@@ -129,8 +141,8 @@ const DRUG_CLASSES = {
   ],
 };
 
-function matchesAny(drugNorm: string, list: string[]): boolean {
-  return list.some(item => drugNorm.includes(item) || item.includes(drugNorm));
+function matchesAny(drugTokens: string[], list: string[]): boolean {
+  return list.some(item => drugTokens.some(tok => tok.includes(item) || item.includes(tok)));
 }
 
 /**
@@ -142,7 +154,7 @@ export function evaluateLifestyleDietaryRadar(
   drugsComReport: ScrapedInteractionReport | null,
   _evaluatedPairs: EvaluatedDrugPair[] = []
 ): LifestyleDietaryRadarReport {
-  const normDrugs = drugs.map(d => ({ raw: d, norm: normalizeDrug(d) }));
+  const normDrugs = drugs.map(d => ({ raw: d, tokens: extractDrugNormTokens(d) }));
   const foodInteractions = drugsComReport?.food_interactions || [];
 
   // Scraped text excerpts helper
@@ -167,15 +179,15 @@ export function evaluateLifestyleDietaryRadar(
   let hasCnsDepressRisk = false;
   let hasLiverRisk = false;
 
-  for (const { raw, norm } of normDrugs) {
-    if (matchesAny(norm, DRUG_CLASSES.nsaids)) {
+  for (const { raw, tokens } of normDrugs) {
+    if (matchesAny(tokens, DRUG_CLASSES.nsaids)) {
       hasGiBleedRisk = true;
       alcoholTriggers.push({
         drug: raw,
         hazard: 'Elevated risk of severe gastrointestinal bleeding, ulceration, and gastric mucosal breakdown',
         severity: 'major',
       });
-    } else if (matchesAny(norm, DRUG_CLASSES.anticoagulants)) {
+    } else if (matchesAny(tokens, DRUG_CLASSES.anticoagulants)) {
       hasGiBleedRisk = true;
       alcoholTriggers.push({
         drug: raw,
@@ -184,7 +196,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.cnsDepressants)) {
+    if (matchesAny(tokens, DRUG_CLASSES.cnsDepressants)) {
       hasCnsDepressRisk = true;
       alcoholTriggers.push({
         drug: raw,
@@ -193,7 +205,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.acetaminophen)) {
+    if (matchesAny(tokens, DRUG_CLASSES.acetaminophen)) {
       hasLiverRisk = true;
       alcoholTriggers.push({
         drug: raw,
@@ -273,8 +285,8 @@ export function evaluateLifestyleDietaryRadar(
   let hasCardiacInteraction = false;
   let hasCyp1a2Blockade = false;
 
-  for (const { raw, norm } of normDrugs) {
-    if (matchesAny(norm, DRUG_CLASSES.betaBlockers)) {
+  for (const { raw, tokens } of normDrugs) {
+    if (matchesAny(tokens, DRUG_CLASSES.betaBlockers)) {
       hasBetaBlockerInteraction = true;
       caffeineTriggers.push({
         drug: raw,
@@ -283,7 +295,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.cardiacStimulants)) {
+    if (matchesAny(tokens, DRUG_CLASSES.cardiacStimulants)) {
       hasCardiacInteraction = true;
       caffeineTriggers.push({
         drug: raw,
@@ -292,7 +304,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.cyp1a2Inhibitors)) {
+    if (matchesAny(tokens, DRUG_CLASSES.cyp1a2Inhibitors)) {
       hasCyp1a2Blockade = true;
       caffeineTriggers.push({
         drug: raw,
@@ -371,8 +383,8 @@ export function evaluateLifestyleDietaryRadar(
   let hasCcbGrapefruit = false;
   let hasOtherCyp3a4 = false;
 
-  for (const { raw, norm } of normDrugs) {
-    if (matchesAny(norm, DRUG_CLASSES.cyp3a4Statins)) {
+  for (const { raw, tokens } of normDrugs) {
+    if (matchesAny(tokens, DRUG_CLASSES.cyp3a4Statins)) {
       hasStatinGrapefruit = true;
       grapefruitTriggers.push({
         drug: raw,
@@ -381,7 +393,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.cyp3a4CalciumChannelBlockers)) {
+    if (matchesAny(tokens, DRUG_CLASSES.cyp3a4CalciumChannelBlockers)) {
       hasCcbGrapefruit = true;
       grapefruitTriggers.push({
         drug: raw,
@@ -390,7 +402,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.cyp3a4ImmunosuppressantsOthers)) {
+    if (matchesAny(tokens, DRUG_CLASSES.cyp3a4ImmunosuppressantsOthers)) {
       hasOtherCyp3a4 = true;
       grapefruitTriggers.push({
         drug: raw,
@@ -469,8 +481,8 @@ export function evaluateLifestyleDietaryRadar(
   let hasThyroid = false;
   let hasBisphosphonate = false;
 
-  for (const { raw, norm } of normDrugs) {
-    if (matchesAny(norm, DRUG_CLASSES.chelationFluoroquinolones)) {
+  for (const { raw, tokens } of normDrugs) {
+    if (matchesAny(tokens, DRUG_CLASSES.chelationFluoroquinolones)) {
       hasFluoroquinolone = true;
       dairyTriggers.push({
         drug: raw,
@@ -479,7 +491,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.chelationTetracyclines)) {
+    if (matchesAny(tokens, DRUG_CLASSES.chelationTetracyclines)) {
       hasTetracycline = true;
       dairyTriggers.push({
         drug: raw,
@@ -488,7 +500,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.chelationThyroid)) {
+    if (matchesAny(tokens, DRUG_CLASSES.chelationThyroid)) {
       hasThyroid = true;
       dairyTriggers.push({
         drug: raw,
@@ -497,7 +509,7 @@ export function evaluateLifestyleDietaryRadar(
       });
     }
 
-    if (matchesAny(norm, DRUG_CLASSES.chelationBisphosphonates)) {
+    if (matchesAny(tokens, DRUG_CLASSES.chelationBisphosphonates)) {
       hasBisphosphonate = true;
       dairyTriggers.push({
         drug: raw,

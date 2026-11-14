@@ -29,7 +29,7 @@ class ApiKeysManager {
     const rawKeys: string[] = [];
 
     // 1. Read from env multiple keys
-    const envMulti = import.meta.env.VITE_RXCHECK_API_KEYS as string | undefined;
+    const envMulti = import.meta.env?.VITE_RXCHECK_API_KEYS as string | undefined;
     if (envMulti) {
       envMulti.split(',').map(k => k.trim()).filter(Boolean).forEach(k => {
         if (!rawKeys.includes(k)) rawKeys.push(k);
@@ -37,7 +37,7 @@ class ApiKeysManager {
     }
 
     // 2. Read single env key
-    const envSingle = import.meta.env.VITE_RXCHECK_API_KEY as string | undefined;
+    const envSingle = import.meta.env?.VITE_RXCHECK_API_KEY as string | undefined;
     if (envSingle && !rawKeys.includes(envSingle.trim())) {
       rawKeys.unshift(envSingle.trim());
     }

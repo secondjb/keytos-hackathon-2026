@@ -43,6 +43,7 @@ import {
   fetchDrugsComInteractions,
   convertDrugsComReportToPairs,
   extractSymptomsFromRecords,
+  restartScraperBackend,
 } from './services/scraperApi';
 import type { EvaluatedDrugPair, ScrapedInteractionReport } from './types/rxcheck';
 
@@ -65,7 +66,22 @@ export const App: React.FC = () => {
   const [evaluatedPairsOpen, setEvaluatedPairsOpen] = useState(true);
   const [selectedAilmentId, setSelectedAilmentId] = useState<string | null>(null);
   const [activeRightTab, setActiveRightTab] = useState<'regimen' | 'otc_matcher'>('regimen');
+  const [isRestartingScraper, setIsRestartingScraper] = useState(false);
   const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleRestartScraper = async () => {
+    setIsRestartingScraper(true);
+    try {
+      const res = await restartScraperBackend();
+      if (res.available) {
+        await handleEvaluate(drugs);
+      }
+    } catch (err) {
+      console.error('Failed to restart scraper:', err);
+    } finally {
+      setIsRestartingScraper(false);
+    }
+  };
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -551,7 +567,12 @@ export const App: React.FC = () => {
 
                       {/* 2. Drugs.com Clinical Report (Loaded or streaming) */}
                       {(scrapedReport || isLoadingDrugsCom) && (
-                        <DrugsComReportCard report={scrapedReport} isLoading={isLoadingDrugsCom} />
+                        <DrugsComReportCard
+                          report={scrapedReport}
+                          isLoading={isLoadingDrugsCom}
+                          onRestartScraper={handleRestartScraper}
+                          isRestarting={isRestartingScraper}
+                        />
                       )}
 
                       {/* 3. Adverse Signs & Symptoms */}

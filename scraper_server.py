@@ -27,15 +27,20 @@ EXECUTOR = ThreadPoolExecutor(max_workers=4)
 SEARCH_CACHE: Dict[str, List[Dict[str, Any]]] = {}
 REPORT_CACHE: Dict[str, Dict[str, Any]] = {}
 
-def clean_drug_string(d: str) -> (str, Optional[str]):
-    """Extracts main drug name and optional parenthetical name."""
+def clean_drug_string(d: str) -> (str, List[str]):
+    """Extracts main drug name and individual parenthetical brand/generic names."""
     base = re.sub(r'\(.*?\)', '', d).strip()
     base = re.sub(r'[^a-zA-Z0-9\s-]', '', base).strip()
     parens = re.findall(r'\((.*?)\)', d)
-    paren = None
+    tokens: List[str] = []
     if parens:
-        paren = re.sub(r'[^a-zA-Z0-9\s-]', '', parens[0]).strip()
-    return base, paren
+        # Split inside parentheses by /, ,, or 'or'
+        parts = re.split(r'[/,]|(?:\s+or\s+)', parens[0])
+        for p in parts:
+            cleaned_p = re.sub(r'[^a-zA-Z0-9\s-]', '', p).strip()
+            if cleaned_p and len(cleaned_p) >= 2:
+                tokens.append(cleaned_p)
+    return base, tokens
 
 def _sync_search_drugs_com(query: str) -> List[Dict[str, Any]]:
     clean = query.strip().lower()
@@ -43,12 +48,15 @@ def _sync_search_drugs_com(query: str) -> List[Dict[str, Any]]:
         return []
 
     # If query has parentheses or noise, clean it
-    base_name, paren_name = clean_drug_string(clean)
-    search_terms = [clean]
-    if base_name and base_name != clean:
-        search_terms.insert(0, base_name)
-    if paren_name and paren_name != clean and paren_name != base_name:
-        search_terms.append(paren_name)
+    base_name, paren_tokens = clean_drug_string(clean)
+    search_terms = []
+    if base_name:
+        search_terms.append(base_name)
+    for pt in paren_tokens:
+        if pt not in search_terms:
+            search_terms.append(pt)
+    if clean not in search_terms:
+        search_terms.append(clean)
 
     for term in search_terms:
         if term in SEARCH_CACHE and SEARCH_CACHE[term]:
@@ -192,7 +200,8 @@ def _sync_parse_report_html(html_content: str, url: str) -> Dict[str, Any]:
             report["duplications"].append(entry)
         elif "food" in section_name:
             report["food_interactions"].append(entry)
-        elif "drug" in section_name:
+        else:
+            # Main drug-to-drug interactions (e.g. "major drug interactions", "major", or default)
             report["drug_interactions"].append(entry)
 
     return report
